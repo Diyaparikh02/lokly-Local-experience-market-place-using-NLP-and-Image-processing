@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- About Hero -->
+<div class="-mx-6 -mt-0 mb-12 relative h-64 bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center overflow-hidden">
+  <div class="absolute inset-0 opacity-10" style="background-image:url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1400');background-size:cover;background-position:center"></div>
+  <div class="relative text-center text-white px-6">
+    <p class="text-sm font-semibold uppercase tracking-widest mb-2 opacity-80">Who We Are</p>
+    <h1 class="text-5xl font-black">About LOKLY</h1>
+    <p class="mt-3 text-lg opacity-90 max-w-xl mx-auto">Bridging travellers with the heart of India's diverse cultures</p>
+  </div>
+</div>
+
+<!-- REMOVED STYLE
+  body {
+    background-color: #fff7f2; /* soft beige/cream background */
+  }
+  .about-container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 40px 20px;
+  }
+  h1, h2, h3 {
+    color: #222;
+  }
+  .team {
+    display: flex;
+    justify-content: space-around;
+    margin: 40px 0;
+    text-align: center;
+  }
+  .team img {
+    width: 120px;
+    border-radius: 50%;
+  }
+  .cta {
+    text-align: center;
+    margin: 40px 0;
+    padding: 30px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
+  }
+  .cta button {
+    background: orange;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .share-experience, .uploaded {
+    margin-top: 40px;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.05);
+  }
+  .uploaded ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  .uploaded li {
+    margin-bottom: 15px;
+  }
+  .uploaded pre {
+    white-space: pre-wrap;
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 5px;
+  }
+  .reels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 15px;
+  }
+  .reel-card {
+    flex: 1;
+    min-width: 300px;
+  }
+  --REMOVED STYLE BLOCK-->
+
+<div>
+
+  <!-- Mission & Story -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-14">
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+      <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-3">Our Mission</h2>
+      <p class="text-gray-600 leading-relaxed">At LOKLY, our mission is to bridge the gap between travelers and the heart of India's diverse cultures. We believe that the most enriching travel experiences come from genuine human connections and immersive cultural exchange. By connecting tourists with local hosts, we aim to foster understanding, respect, and appreciation for India's rich heritage, while also empowering local communities through sustainable tourism.</p>
+    </div>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+      <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900 mb-3">Our Story</h2>
+      <p class="text-gray-600 leading-relaxed">LOKLY was born from a passion for authentic travel and a deep love for India's cultural tapestry. Our founders experienced firsthand the transformative power of connecting with local communities during their travels across India. Inspired by these experiences, they envisioned a platform that would make it easier for others to discover the true essence of India, beyond the typical tourist trails.</p>
+    </div>
+  </div>
+
+  <!-- Meet the Team -->
+  <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">Meet the Team</h2>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-14">
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center hover:shadow-lg transition-shadow">
+      <div class="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden bg-orange-100">
+        <img src="{{ url_for('static', filename='images/pp1.png') }}" alt="Sarah" class="w-full h-full object-cover">
+      </div>
+      <h3 class="text-lg font-bold text-gray-900">Sarah Kapoor</h3>
+      <p class="text-orange-500 font-semibold text-sm mb-3">Co-founder &amp; CEO</p>
+      <p class="text-gray-500 text-sm leading-relaxed">Sarah brings a wealth of experience in sustainable tourism and a deep understanding of Indian culture.</p>
+    </div>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center hover:shadow-lg transition-shadow">
+      <div class="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden bg-orange-100">
+        <img src="{{ url_for('static', filename='images/pp2.png') }}" alt="Shreya" class="w-full h-full object-cover">
+      </div>
+      <h3 class="text-lg font-bold text-gray-900">Shreya Sharma</h3>
+      <p class="text-orange-500 font-semibold text-sm mb-3">Co-founder &amp; CTO</p>
+      <p class="text-gray-500 text-sm leading-relaxed">Shreya's technical expertise and love for travel shaped LOKLY's user-friendly platform.</p>
+    </div>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center hover:shadow-lg transition-shadow">
+      <div class="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden bg-orange-100">
+        <img src="{{ url_for('static', filename='images/pp3.png') }}" alt="Priya" class="w-full h-full object-cover">
+      </div>
+      <h3 class="text-lg font-bold text-gray-900">Priya Verma</h3>
+      <p class="text-orange-500 font-semibold text-sm mb-3">Head of Host Relations</p>
+      <p class="text-gray-500 text-sm leading-relaxed">Priya ensures LOKLY's experiences are authentic and beneficial for all communities.</p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="rounded-3xl bg-gradient-to-r from-orange-500 to-amber-400 p-12 text-center text-white mb-14">
+    <h2 class="text-3xl font-black mb-2">Ready to embark on an unforgettable journey?</h2>
+    <p class="text-lg opacity-90 mb-6">Discover the heart of India with LOKLY.</p>
+    <a href="{{ url_for('home') }}" class="inline-block bg-white text-orange-600 font-bold px-8 py-3 rounded-full hover:shadow-xl transition-all text-sm">Explore Experiences</a>
+  </div>
+
+  <!-- Share Experience -->
+  <section class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-10">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+        <svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </div>
+      <h2 class="text-xl font-bold text-gray-900">Share Your Experience</h2>
+    </div>
+    <form action="{{ url_for('upload_experience') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Title</label>
+        <input type="text" name="title" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Give your experience a title">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Type</label>
+        <select name="type" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+          <option value="blog">Blog</option>
+          <option value="reel">Reel (Video)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Blog Content</label>
+        <textarea name="content" rows="4" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none" placeholder="Write your travel story..."></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Upload Reel (Video)</label>
+        <input type="file" name="media" accept="video/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+      </div>
+      <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-colors">Upload</button>
+    </form>
+  </section>
+
+  <!-- Community Experiences -->
+  <section class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-10">
+    <h2 class="text-xl font-bold text-gray-900 mb-6">Community Experiences</h2>
+
+    <!-- Blogs -->
+    <h3 class="text-base font-bold text-gray-700 mb-4 flex items-center gap-2">
+      <span class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center text-blue-500 text-xs">B</span> Blogs
+    </h3>
+    <ul class="space-y-4 mb-8">
+      {% for blog in blogs %}
+        <li class="border border-gray-100 rounded-2xl p-5 hover:border-orange-200 transition-colors">
+          <p class="font-semibold text-gray-900 mb-2">{{ blog.title }}</p>
+          <pre class="text-sm text-gray-600 bg-gray-50 rounded-xl p-3 whitespace-pre-wrap font-sans leading-relaxed">{{ blog.content }}</pre>
+        </li>
+      {% else %}
+        <li class="text-center py-8 text-gray-400">
+          <p class="text-sm">No blogs yet. Be the first to share!</p>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <!-- Reels -->
+    <h3 class="text-base font-bold text-gray-700 mb-4 flex items-center gap-2">
+      <span class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center text-red-500 text-xs">R</span> Reels
+    </h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {% for reel in reels %}
+        <div class="rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+          <video src="{{ url_for('static', filename='uploads/' ~ reel) }}" controls class="w-full"></video>
+          <p class="text-xs text-gray-500 px-3 py-2 truncate">{{ reel }}</p>
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-400 col-span-3 text-center py-6">No reels yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+
+{% endblock %}

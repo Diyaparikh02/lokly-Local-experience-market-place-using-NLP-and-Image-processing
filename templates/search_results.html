@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Search: {{ q }} — Lokly{% endblock %}
+{% block content %}
+
+<div class="container fade-in" style="padding-top:48px;padding-bottom:80px;">
+
+  <!-- Header -->
+  <div style="margin-bottom:32px;">
+    <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Search Results</p>
+    <h1 style="font-size:2rem;font-weight:800;color:#111;margin-bottom:8px;">
+      {% if q %}&ldquo;{{ q }}&rdquo;{% else %}All Activities{% endif %}
+    </h1>
+    <p style="color:#888;font-size:.9rem;">
+      {% if results %}
+        <strong style="color:#111;">{{ results | length }}</strong>
+        result{{ 's' if results | length != 1 }} found
+        {% if q %}&nbsp;&middot;&nbsp;
+          <a href="{{ url_for('global_search') }}" style="color:#f97316;font-weight:600;text-decoration:none;">Clear search</a>
+        {% endif %}
+      {% else %}
+        No results found for &ldquo;{{ q }}&rdquo;
+        &nbsp;&middot;&nbsp;
+        <a href="{{ url_for('home') }}" style="color:#f97316;font-weight:600;text-decoration:none;">Go home</a>
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Search bar (re-search) -->
+  <form action="{{ url_for('global_search') }}" method="GET"
+        style="display:flex;gap:10px;margin-bottom:36px;max-width:520px;">
+    <input name="q" value="{{ q }}"
+           style="flex:1;border:1.5px solid #e5e7eb;border-radius:999px;padding:10px 20px;font-size:.9rem;outline:none;font-family:inherit;"
+           placeholder="Search by title, city, category…"/>
+    <button type="submit" class="btn-primary" style="padding:10px 24px;">Search</button>
+  </form>
+
+  <!-- Category quick-filter pills -->
+  {% if all_categories %}
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:36px;">
+    {% for cat in all_categories %}
+    <a href="{{ url_for('global_search', q=cat) }}"
+       style="text-decoration:none;padding:6px 16px;border-radius:999px;font-size:.8rem;font-weight:600;
+              border:1.5px solid #e5e7eb;background:#fff;color:#555;
+              transition:all .2s;"
+       onmouseover="this.style.borderColor='#f97316';this.style.color='#f97316'"
+       onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#555'">
+      {{ cat }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Results grid -->
+  {% if results %}
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;" class="exp-grid">
+    {% for exp in results %}
+    <a href="{{ url_for('experience_detail', id=exp.id) }}" class="card fade-in" style="text-decoration:none;">
+      <div style="height:200px;overflow:hidden;position:relative;">
+        <img src="{{ exp.image_url }}"
+             onerror="this.src='/static/images/home.png'"
+             alt="{{ exp.title }}"
+             style="width:100%;height:100%;object-fit:cover;transition:transform .35s;"/>
+        <span style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,.92);
+                     backdrop-filter:blur(4px);color:#f97316;font-size:.7rem;font-weight:700;
+                     padding:4px 10px;border-radius:999px;">{{ exp.category }}</span>
+      </div>
+      <div style="padding:16px;">
+        <h3 style="font-weight:700;font-size:.95rem;color:#111;line-height:1.35;margin-bottom:6px;">
+          {{ exp.title }}
+        </h3>
+        <p style="font-size:.825rem;color:#777;display:flex;align-items:center;gap:4px;">
+          <svg width="12" height="12" fill="#f97316" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+              d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+              clip-rule="evenodd"/>
+          </svg>
+          {{ exp.location or "India" }}
+        </p>
+        <p style="font-size:.8rem;color:#aaa;margin-top:6px;line-height:1.5;
+                  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+          {{ exp.description }}
+        </p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+          <span style="font-weight:800;font-size:1rem;color:#f97316;">&#8377;{{ exp.price }}</span>
+          <span style="font-size:.75rem;font-weight:600;background:#fff7ed;color:#f97316;
+                       padding:5px 12px;border-radius:999px;border:1px solid #fed7aa;">Book Now</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div style="text-align:center;padding:80px 0;">
+    <div style="font-size:3.5rem;margin-bottom:16px;">🔍</div>
+    <p style="font-size:1rem;font-weight:600;color:#888;margin-bottom:8px;">
+      No activities found for &ldquo;{{ q }}&rdquo;.
+    </p>
+    <p style="color:#bbb;font-size:.85rem;margin-bottom:28px;">
+      Try a different keyword, city name, or category.
+    </p>
+    <a href="{{ url_for('all_experiences') }}" class="btn-orange">Browse All Experiences</a>
+  </div>
+  {% endif %}
+
+</div>
+
+<style>
+@media(max-width:1024px){.exp-grid{grid-template-columns:repeat(3,1fr)!important;}}
+@media(max-width:768px) {.exp-grid{grid-template-columns:repeat(2,1fr)!important;}}
+@media(max-width:480px) {.exp-grid{grid-template-columns:1fr!important;}}
+</style>
+
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ experience.title }} — Lokly{% endblock %}
+{% block content %}
+<div class="container fade-in" style="padding-top:40px;padding-bottom:80px;">
+  <a href="{{ url_for('home') }}" style="font-size:.85rem;color:#888;text-decoration:none;display:inline-flex;align-items:center;gap:5px;margin-bottom:24px;transition:color .2s;"
+     onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='#888'">
+    &#8592; Back to experiences
+  </a>
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:start;">
+
+    <!-- LEFT -->
+    <div>
+      <!-- Main image -->
+      <div style="border-radius:20px;overflow:hidden;height:420px;background:#f5f5f5;">
+        <img src="{{ experience.image_url }}"
+             onerror="this.src='/static/images/home.png'"
+             alt="{{ experience.title }}"
+             style="width:100%;height:100%;object-fit:cover;"/>
+      </div>
+
+      <!-- Title + location -->
+      <div style="margin-top:28px;margin-bottom:28px;padding-bottom:28px;border-bottom:1px solid #f0f0f0;">
+        {% if experience.category %}
+          <span style="font-size:.7rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.12em;">{{ experience.category }}</span>
+        {% endif %}
+        <h1 style="font-size:1.75rem;font-weight:800;color:#111;margin-top:8px;line-height:1.25;">{{ experience.title }}</h1>
+        <p style="color:#777;font-size:.9rem;margin-top:8px;display:flex;align-items:center;gap:5px;">
+          <svg width="14" height="14" fill="#f97316" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+          {{ experience.location }}
+        </p>
+      </div>
+
+      <!-- About -->
+      <div style="background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.05);margin-bottom:24px;">
+        <h2 style="font-size:1.05rem;font-weight:700;color:#111;margin-bottom:14px;">About this Experience</h2>
+        <p style="color:#555;font-size:.9rem;line-height:1.8;">{{ experience.description }}</p>
+      </div>
+
+      <!-- Host info (hosted only) -->
+      {% if experience.is_hosted and experience.host_name %}
+      <div style="background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.05);">
+        <h2 style="font-size:1.05rem;font-weight:700;color:#111;margin-bottom:16px;">Meet Your Host</h2>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.2rem;flex-shrink:0;">
+            {{ experience.host_name[0].upper() }}
+          </div>
+          <div>
+            <p style="font-weight:700;color:#111;">{{ experience.host_name }}</p>
+            <p style="font-size:.8rem;color:#888;margin-top:3px;">Local Host &bull; Verified</p>
+          </div>
+        </div>
+        {% if experience.session_link %}
+        <a href="{{ experience.session_link }}" target="_blank"
+           style="display:inline-flex;align-items:center;gap:6px;margin-top:16px;font-size:.85rem;font-weight:600;color:#f97316;text-decoration:none;border:1.5px solid #fed7aa;border-radius:999px;padding:7px 16px;transition:all .2s;"
+           onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background='transparent'">
+          🔗 Join Session Link
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT: Booking card -->
+    <div style="position:sticky;top:88px;">
+      <div style="background:#fff;border-radius:20px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.1);border:1px solid #f0f0f0;">
+        <div style="margin-bottom:24px;">
+          <span style="font-size:2rem;font-weight:800;color:#f97316;">&#8377;{{ experience.price }}</span>
+          <span style="font-size:.875rem;color:#999;margin-left:6px;">/ per person</span>
+        </div>
+
+        {% if session.get('user_id') %}
+          {% if experience.is_hosted %}
+            <form action="{{ url_for('checkout', id=experience.id) }}" method="GET">
+              <div style="margin-bottom:20px;">
+                <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:8px;">Select a date</label>
+                <input type="date" name="date" required class="input-field"/>
+              </div>
+              <button type="submit" class="btn-orange" style="width:100%;padding:14px;font-size:.95rem;">Proceed to Payment</button>
+            </form>
+          {% else %}
+            <a href="{{ url_for('enroll', id=experience.id) }}" class="btn-orange" style="width:100%;padding:14px;font-size:.95rem;text-align:center;display:block;">Enroll in Activity</a>
+          {% endif %}
+        {% else %}
+          <a href="{{ url_for('login') }}" class="btn-primary" style="width:100%;padding:14px;font-size:.95rem;text-align:center;display:block;">Login to Book</a>
+        {% endif %}
+
+        <p style="text-align:center;font-size:.78rem;color:#bbb;margin-top:14px;">🔒 Secure checkout &bull; Pay on next screen</p>
+
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid #f5f5f5;">
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:10px;">
+            <span style="color:#666;">Price per person</span>
+            <span style="font-weight:600;color:#111;">&#8377;{{ experience.price }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;padding-top:10px;border-top:1px solid #f5f5f5;">
+            <span style="font-weight:700;color:#111;">Total</span>
+            <span style="font-weight:800;color:#f97316;">&#8377;{{ experience.price }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

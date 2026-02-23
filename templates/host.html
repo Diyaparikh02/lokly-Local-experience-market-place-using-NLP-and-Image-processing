@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Become a Host — Lokly{% endblock %}
+{% block content %}
+
+<!-- Hero -->
+<section style="position:relative;height:320px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+  <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1400&q=80"
+       alt="host hero"
+       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.4);"/>
+  <div style="position:relative;z-index:2;text-align:center;padding:0 20px;" class="fade-in">
+    <p style="font-size:.72rem;font-weight:700;color:#fb923c;text-transform:uppercase;letter-spacing:.18em;margin-bottom:12px;">For Locals</p>
+    <h1 style="font-size:2.5rem;font-weight:800;color:#fff;margin-bottom:12px;">Become a Host</h1>
+    <p style="color:rgba(255,255,255,.75);font-size:1rem;max-width:480px;margin:0 auto;">Share your skills, earn extra income. List your experience in minutes.</p>
+  </div>
+</section>
+
+<!-- Form -->
+<div class="container" style="padding-top:64px;padding-bottom:80px;max-width:760px;">
+  {% if session.get('user_id') %}
+
+  <!-- Benefits strip -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:48px;">
+    {% for icon, title, desc in [('💰','Earn Income','Set your own price and schedule.'),('🌍','Reach Guests','Access thousands of travellers.'),('🛡️','Fully Supported','We handle bookings and payments.')] %}
+    <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06);text-align:center;">
+      <div style="font-size:2rem;margin-bottom:10px;">{{ icon }}</div>
+      <h3 style="font-weight:700;font-size:.9rem;color:#111;margin-bottom:6px;">{{ title }}</h3>
+      <p style="font-size:.8rem;color:#888;line-height:1.6;">{{ desc }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="background:#fff;border-radius:20px;padding:44px;box-shadow:0 4px 28px rgba(0,0,0,.08);">
+    <h2 style="font-size:1.375rem;font-weight:800;color:#111;margin-bottom:28px;">List Your Activity</h2>
+    <form action="{{ url_for('become_host') }}" method="POST" enctype="multipart/form-data">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div>
+          <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Your Name *</label>
+          <input type="text" name="name" required placeholder="Priya Sharma" class="input-field"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Activity Title *</label>
+          <input type="text" name="activity" required placeholder="Pottery Workshop" class="input-field"/>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Description *</label>
+        <textarea name="description" required rows="4"
+                  placeholder="Describe what guests will experience, learn, and take home..."
+                  class="input-field" style="resize:vertical;"></textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div>
+          <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Location *</label>
+          <input type="text" name="location" required placeholder="e.g. Jaipur, Rajasthan" class="input-field"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Price (&#8377;) *</label>
+          <input type="number" name="price" required min="0" placeholder="1500" class="input-field"/>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div>
+          <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Category *</label>
+          <select name="category" class="input-field" required>
+            <option value="" disabled selected>— Select a category —</option>
+            <option value="Art &amp; Culture">Art &amp; Culture</option>
+            <option value="Culinary Arts">Culinary Arts</option>
+            <option value="Dance">Dance</option>
+            <option value="Wellness">Wellness</option>
+            <option value="Adventure">Adventure</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Session Link (optional)</label>
+          <input type="url" name="session_link" placeholder="https://meet.google.com/..." class="input-field"/>
+        </div>
+      </div>
+
+      <div style="margin-bottom:32px;">
+        <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Activity Image</label>
+        <input type="file" name="image" accept="image/*" class="input-field" style="padding:10px 14px;cursor:pointer;"/>
+      </div>
+
+      <button type="submit" class="btn-orange" style="width:100%;padding:14px;font-size:.95rem;">Submit Activity</button>
+    </form>
+  </div>
+
+  {% else %}
+  <div style="text-align:center;padding:80px 0;">
+    <div style="font-size:3.5rem;margin-bottom:18px;">🔐</div>
+    <h2 style="font-size:1.375rem;font-weight:700;color:#111;margin-bottom:10px;">Login Required</h2>
+    <p style="color:#888;font-size:.9rem;margin-bottom:28px;">You need to be logged in to list an activity on Lokly.</p>
+    <a href="{{ url_for('login') }}" class="btn-primary">Login to Continue</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Checkout — {{ experience.title }} — Lokly{% endblock %}
+{% block content %}
+
+<script src="https://js.stripe.com/v3/"></script>
+
+<!-- Progress bar -->
+<div style="background:#fff;border-bottom:1px solid #f0f0f0;padding:18px 0;">
+  <div class="container" style="display:flex;align-items:center;justify-content:center;">
+    {% for step, label in [('1','Browse'),('2','Checkout'),('3','Confirmed')] %}
+    <div style="display:flex;align-items:center;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+        <div style="width:32px;height:32px;border-radius:50%;
+             background:{% if step=='2' %}#f97316{% elif step=='1' %}#111{% else %}#e5e7eb{% endif %};
+             color:{% if step=='3' %}#aaa{% else %}#fff{% endif %};
+             display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;">
+          {% if step == '1' %}&#10003;{% else %}{{ step }}{% endif %}
+        </div>
+        <span style="font-size:.72rem;font-weight:{% if step=='2' %}700{% else %}500{% endif %};
+              color:{% if step=='2' %}#f97316{% elif step=='3' %}#bbb{% else %}#555{% endif %};">{{ label }}</span>
+      </div>
+      {% if not loop.last %}
+      <div style="width:80px;height:2px;background:{% if step=='1' %}#111{% else %}#e5e7eb{% endif %};margin:0 8px 20px;"></div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="container fade-in" style="padding-top:40px;padding-bottom:80px;max-width:980px;">
+  <a href="{{ url_for('experience_detail', id=experience.id) }}"
+     style="font-size:.85rem;color:#888;text-decoration:none;display:inline-flex;align-items:center;gap:5px;margin-bottom:28px;"
+     onmouseover="this.style.color='#f97316'" onmouseout="this.style.color='#888'">
+    &larr; Back to experience
+  </a>
+
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:36px;align-items:start;" class="checkout-grid">
+
+    <!-- LEFT: Summary -->
+    <div>
+      <h1 style="font-size:1.55rem;font-weight:800;color:#111;margin-bottom:28px;">Confirm &amp; Pay</h1>
+
+      <!-- Activity card -->
+      <div style="background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.07);display:flex;gap:18px;align-items:center;margin-bottom:24px;border:1px solid #f0f0f0;">
+        <img src="{{ experience.image_url }}" onerror="this.src='/static/images/home.png'"
+             alt="{{ experience.title }}" style="width:90px;height:90px;border-radius:12px;object-fit:cover;flex-shrink:0;"/>
+        <div>
+          <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Hosted Experience</p>
+          <h2 style="font-size:1rem;font-weight:700;color:#111;line-height:1.3;margin-bottom:6px;">{{ experience.title }}</h2>
+          <p style="font-size:.82rem;color:#777;">&#128205; {{ experience.location }}</p>
+          <p style="font-size:.82rem;color:#777;margin-top:5px;">&#128197; <span id="dateDisplay">{{ date }}</span></p>
+        </div>
+      </div>
+
+      <!-- Price breakdown -->
+      <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #f0f0f0;margin-bottom:20px;">
+        <h3 style="font-size:.9rem;font-weight:700;color:#111;margin-bottom:18px;">Price Details</h3>
+        <div style="display:flex;justify-content:space-between;font-size:.875rem;margin-bottom:12px;">
+          <span style="color:#555;">Activity fee</span>
+          <span style="font-weight:600;color:#111;">&#8377;{{ experience.price|int }}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.875rem;margin-bottom:12px;">
+          <span style="color:#555;">Platform fee</span>
+          <span style="font-weight:600;color:#22c55e;">Free</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.875rem;margin-bottom:12px;">
+          <span style="color:#555;">GST &amp; taxes</span>
+          <span style="font-weight:600;color:#111;">Included</span>
+        </div>
+        <div style="border-top:1.5px solid #f0f0f0;margin-top:16px;padding-top:16px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:700;font-size:.95rem;color:#111;">Total payable</span>
+          <span style="font-weight:800;font-size:1.3rem;color:#f97316;">&#8377;{{ experience.price|int }}</span>
+        </div>
+      </div>
+
+      <!-- Trust badges -->
+      <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:#777;">&#128274; 256-bit SSL secured</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:#777;">&#9989; Instant confirmation</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:#777;">&#128184; Easy refund policy</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Pay panel -->
+    <div style="position:sticky;top:88px;">
+      <div style="background:#fff;border-radius:20px;padding:28px;box-shadow:0 4px 24px rgba(0,0,0,.1);border:1px solid #f0f0f0;">
+        <div style="text-align:center;padding-bottom:20px;border-bottom:1px solid #f5f5f5;margin-bottom:20px;">
+          <p style="font-size:.75rem;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">You Pay</p>
+          <p style="font-size:2.5rem;font-weight:800;color:#f97316;">&#8377;{{ experience.price|int }}</p>
+          <p style="font-size:.78rem;color:#bbb;margin-top:4px;">1 person &bull; {{ date }}</p>
+        </div>
+
+        <!-- Stripe card element -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:.78rem;font-weight:600;color:#555;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;">Card Details</label>
+          <div id="card-element" style="padding:14px 16px;border:1.5px solid #e5e7eb;border-radius:10px;background:#fafafa;transition:border-color .2s;"></div>
+          <div id="card-errors" style="color:#dc2626;font-size:.8rem;margin-top:7px;min-height:18px;"></div>
+        </div>
+
+        <!-- Error box -->
+        <div id="payment-error" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:#dc2626;font-weight:500;line-height:1.5;"></div>
+
+        <!-- Pay button -->
+        <button id="pay-btn" onclick="startPayment()"
+                style="width:100%;padding:15px;border:none;border-radius:12px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;transition:all .25s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;"
+                onmouseover="if(!this.disabled){this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(249,115,22,.4)'}"
+                onmouseout="if(!this.disabled){this.style.transform='translateY(0)';this.style.boxShadow='none'}">
+          <span id="pay-btn-text">&#128272; Pay &#8377;{{ experience.price|int }}</span>
+        </button>
+        <p style="text-align:center;font-size:.73rem;color:#bbb;margin-top:10px;">&#128274; Secured by Stripe</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Processing overlay -->
+<div id="pay-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:24px;padding:48px 44px;text-align:center;max-width:320px;width:90%;">
+    <div style="width:52px;height:52px;border:4px solid #f0f0f0;border-top-color:#f97316;border-radius:50%;margin:0 auto 20px;animation:spin .8s linear infinite;"></div>
+    <p style="font-weight:700;font-size:1rem;color:#111;margin-bottom:6px;">Verifying payment&hellip;</p>
+    <p style="font-size:.82rem;color:#888;">Please do not refresh or go back</p>
+  </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+@media(max-width:768px){ .checkout-grid{ grid-template-columns:1fr!important; } }
+#card-element.StripeElement--focus { border-color:#f97316 !important; }
+</style>
+
+<script>
+const ACTIVITY_ID  = {{ experience.id }};
+const BOOKING_DATE = {{ date | tojson }};
+const AMOUNT_INR   = {{ experience.price | int }};
+const STRIPE_KEY   = {{ stripe_publishable_key | tojson }};
+
+(function(){
+  const d = new Date(BOOKING_DATE);
+  if (!isNaN(d))
+    document.getElementById('dateDisplay').textContent =
+      d.toLocaleDateString('en-IN',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+})();
+
+const stripeObj   = Stripe(STRIPE_KEY);
+const elements    = stripeObj.elements();
+const cardElement = elements.create('card', {
+  style: {
+    base: {
+      fontSize: '15px',
+      fontFamily: '"Inter", sans-serif',
+      color: '#111',
+      '::placeholder': { color: '#aaa' }
+    },
+    invalid: { color: '#dc2626' }
+  }
+});
+cardElement.mount('#card-element');
+cardElement.on('change', function(e) {
+  document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
+});
+
+function showError(msg) {
+  const el = document.getElementById('payment-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+  const btn = document.getElementById('pay-btn');
+  btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+  document.getElementById('pay-btn-text').innerHTML = '&#128272; Retry Payment &#8377;' + AMOUNT_INR;
+}
+
+function setOverlay(v) {
+  document.getElementById('pay-overlay').style.display = v ? 'flex' : 'none';
+}
+
+function setBtnLoading(v) {
+  const btn = document.getElementById('pay-btn');
+  btn.disabled = v; btn.style.opacity = v ? '.7' : '1'; btn.style.cursor = v ? 'not-allowed' : 'pointer';
+  if (v) document.getElementById('pay-btn-text').innerHTML = '&#9203; Processing&hellip;';
+}
+
+async function startPayment() {
+  document.getElementById('payment-error').style.display = 'none';
+  document.getElementById('card-errors').textContent = '';
+  setBtnLoading(true);
+
+  let intentData;
+  try {
+    const res = await fetch('/create-payment-intent', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({activity_id: ACTIVITY_ID, date: BOOKING_DATE})
+    });
+    intentData = await res.json();
+    if (!res.ok || intentData.error) { showError(intentData.error || 'Could not initiate payment. Try again.'); return; }
+  } catch(e) { showError('Network error. Check your connection and retry.'); return; }
+
+  const { error, paymentIntent } = await stripeObj.confirmCardPayment(intentData.client_secret, {
+    payment_method: { card: cardElement }
+  });
+
+  if (error) {
+    showError(error.message || 'Card declined. Please try another card.');
+    return;
+  }
+
+  setOverlay(true);
+  try {
+    const vRes = await fetch('/confirm-payment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({payment_intent_id: paymentIntent.id, booking_id: intentData.booking_id})
+    });
+    const vData = await vRes.json();
+    if (vData.success) {
+      window.location.href = '/dashboard';
+    } else {
+      setOverlay(false);
+      showError(vData.error || 'Verification failed. Contact support.');
+    }
+  } catch(e) {
+    setOverlay(false);
+    showError('Network error during verification. Your payment ID: ' + paymentIntent.id);
+  }
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Lokly — Discover Local Experiences{% endblock %}
+{% block content %}
+
+<!-- ══ HERO ════════════════════════════════════════════════════ -->
+<section style="position:relative;height:580px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+  <img src="/static/images/home.png"
+       onerror="this.src='https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1600&q=80'"
+       alt="hero"
+       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(0.45);"/>
+  <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.1),rgba(0,0,0,.5));"></div>
+  <div class="fade-in" style="position:relative;z-index:2;text-align:center;padding:0 20px;max-width:720px;">
+    <p style="font-size:.75rem;font-weight:700;color:#fdba74;letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px;">Real People · Real Places · Real Experiences</p>
+    <h1 style="font-size:clamp(2rem,5vw,3.25rem);font-weight:800;color:#fff;line-height:1.15;margin-bottom:20px;">
+      Discover Unique <span style="color:#fb923c;">Local</span> Experiences
+    </h1>
+    <p style="font-size:1.05rem;color:rgba(255,255,255,.8);margin-bottom:36px;line-height:1.7;">
+      Book handcrafted activities hosted by passionate locals — cooking, trekking, art, wellness and more.
+    </p>
+    <!-- Hero search -->
+    <form action="{{ url_for('global_search') }}" method="GET"
+          style="display:flex;align-items:center;background:#fff;border-radius:999px;padding:6px 6px 6px 22px;box-shadow:0 8px 32px rgba(0,0,0,.2);max-width:520px;margin:0 auto;gap:8px;">
+      <svg width="16" height="16" fill="none" stroke="#999" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+      <input name="q" value="{{ q }}" style="border:none;outline:none;font-size:.9rem;font-family:inherit;width:100%;background:transparent;color:#222;" placeholder="Where do you want to go?"/>
+      <button type="submit" class="btn-primary" style="padding:10px 24px;flex-shrink:0;">Explore</button>
+    </form>
+  </div>
+</section>
+
+<!-- ══ TRUST STRIP ══════════════════════════════════════════════ -->
+<section style="background:#fff;border-bottom:1px solid #f0f0f0;">
+  <div class="container" style="padding-top:28px;padding-bottom:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+    <div>
+      <p style="font-size:1.75rem;font-weight:800;color:#f97316;">500+</p>
+      <p style="font-size:.75rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Experiences</p>
+    </div>
+    <div>
+      <p style="font-size:1.75rem;font-weight:800;color:#f97316;">120+</p>
+      <p style="font-size:.75rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Cities</p>
+    </div>
+    <div>
+      <p style="font-size:1.75rem;font-weight:800;color:#f97316;">10k+</p>
+      <p style="font-size:.75rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Happy Guests</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CATEGORIES ══════════════════════════════════════════════ -->
+<section style="background:#fff;padding:72px 0 48px;">
+  <div class="container">
+    <div style="margin-bottom:36px;">
+      <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Browse by type</p>
+      <h2 style="font-size:1.875rem;font-weight:800;color:#111;">Explore Categories</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;">
+      {% for cat in categories %}
+      <a href="{{ url_for('category_page', slug=cat.slug) }}"
+         style="position:relative;border-radius:16px;overflow:hidden;height:150px;text-decoration:none;display:block;box-shadow:0 2px 12px rgba(0,0,0,.08);transition:transform .25s,box-shadow .25s;"
+         onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.14)'"
+         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 12px rgba(0,0,0,.08)'">
+        <img src="{{ cat.image }}" onerror="this.src='/static/images/home.png'" alt="{{ cat.name }}"
+             style="width:100%;height:100%;object-fit:cover;filter:brightness(.55);transition:filter .25s;"
+             onmouseover="this.style.filter='brightness(.65)'" onmouseout="this.style.filter='brightness(.55)'"/>
+        <span style="position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:flex-start;padding:14px;color:#fff;font-weight:700;font-size:.875rem;">{{ cat.name }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══ SEARCH RESULTS (only shown when a query is active) ══════ -->
+{% if q %}
+<section style="background:#fff7ed;border-top:1px solid #fed7aa;border-bottom:1px solid #fed7aa;padding:56px 0;">
+  <div class="container">
+    <div style="margin-bottom:28px;">
+      <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Search results</p>
+      <h2 style="font-size:1.875rem;font-weight:800;color:#111;">&ldquo;{{ q }}&rdquo;</h2>
+      <p style="color:#888;font-size:.875rem;margin-top:6px;">
+        {% if search_results %}{{ search_results | length }} experience{{ 's' if search_results | length != 1 }} found{% else %}No experiences matched your search{% endif %}
+        &nbsp;&middot;&nbsp;<a href="{{ url_for('home') }}" style="color:#f97316;font-weight:600;text-decoration:none;">Clear search</a>
+      </p>
+    </div>
+
+    {% if search_results %}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;" class="exp-grid">
+      {% for exp in search_results %}
+      <a href="{{ url_for('experience_detail', id=exp.id) }}" class="card fade-in">
+        <div style="height:200px;overflow:hidden;position:relative;">
+          <img src="{{ exp.image_url }}"
+               onerror="this.src='/static/images/home.png'"
+               alt="{{ exp.title }}"
+               style="width:100%;height:100%;object-fit:cover;transition:transform .35s ease;"/>
+          {% if exp.category %}
+          <span style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);color:#f97316;font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:999px;">{{ exp.category }}</span>
+          {% endif %}
+        </div>
+        <div style="padding:16px;">
+          <h3 style="font-weight:700;font-size:.95rem;color:#111;line-height:1.35;margin-bottom:6px;">{{ exp.title }}</h3>
+          <p style="font-size:.825rem;color:#777;display:flex;align-items:center;gap:4px;">
+            <svg width="12" height="12" fill="#f97316" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+            {{ exp.location }}
+          </p>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+            <span style="font-weight:800;font-size:1rem;color:#f97316;">&#8377;{{ exp.price }}</span>
+            <span style="font-size:.75rem;font-weight:600;background:#fff7ed;color:#f97316;padding:5px 12px;border-radius:999px;border:1px solid #fed7aa;">Book Now</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:48px 0;">
+      <div style="font-size:3rem;margin-bottom:12px;">&#128269;</div>
+      <p style="color:#999;font-size:1rem;font-weight:500;">No experiences found for &ldquo;{{ q }}&rdquo;.</p>
+      <p style="color:#bbb;font-size:.85rem;margin-top:6px;">Try a different keyword, city, or category.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+<!-- ══ EXPERIENCES GRID ══════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="fade-in" style="margin-bottom:36px;">
+      <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Handpicked for you</p>
+      <h2 style="font-size:1.875rem;font-weight:800;color:#111;line-height:1.2;">Featured Experiences</h2>
+      <p style="color:#666;margin-top:8px;font-size:.9rem;">Every experience is crafted by locals who love what they do.</p>
+    </div>
+
+    {% if experiences %}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;"
+         class="exp-grid">
+      {% for exp in experiences %}
+      <a href="{{ url_for('experience_detail', id=exp.id) }}" class="card fade-in">
+        <div style="height:200px;overflow:hidden;position:relative;">
+          <img src="{{ exp.image_url }}"
+               onerror="this.src='/static/images/home.png'"
+               alt="{{ exp.title }}"
+               style="width:100%;height:100%;object-fit:cover;transition:transform .35s ease;"/>
+          {% if exp.category %}
+          <span style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);color:#f97316;font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:999px;">{{ exp.category }}</span>
+          {% endif %}
+        </div>
+        <div style="padding:16px;">
+          <h3 style="font-weight:700;font-size:.95rem;color:#111;line-height:1.35;margin-bottom:6px;">{{ exp.title }}</h3>
+          <p style="font-size:.825rem;color:#777;display:flex;align-items:center;gap:4px;">
+            <svg width="12" height="12" fill="#f97316" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+            {{ exp.location }}
+          </p>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+            <span style="font-weight:800;font-size:1rem;color:#f97316;">&#8377;{{ exp.price }}</span>
+            <span style="font-size:.75rem;font-weight:600;background:#fff7ed;color:#f97316;padding:5px 12px;border-radius:999px;border:1px solid #fed7aa;">Book Now</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:80px 0;">
+      <div style="font-size:3.5rem;margin-bottom:16px;">🔍</div>
+      <p style="color:#999;font-size:1rem;font-weight:500;">No experiences available yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ══ HOW IT WORKS ══════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container" style="text-align:center;">
+    <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Simple &amp; Easy</p>
+    <h2 style="font-size:1.875rem;font-weight:800;color:#111;margin-bottom:48px;">How Lokly Works</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;max-width:900px;margin:0 auto;">
+      {% for step, icon, desc in [('Browse Experiences','🔍','Search hundreds of unique local activities near you.'),('Book Instantly','📅','Pick a date, confirm, and get ready to explore.'),('Experience &amp; Enjoy','🌟','Meet your host and create unforgettable memories.')] %}
+      <div style="background:#fff;border-radius:16px;padding:32px 24px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+        <div style="font-size:2.5rem;margin-bottom:16px;">{{ icon }}</div>
+        <h3 style="font-weight:700;font-size:1rem;color:#111;margin-bottom:10px;">{{ step }}</h3>
+        <p style="font-size:.875rem;color:#777;line-height:1.65;">{{ desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══ HOST CTA ══════════════════════════════════════════════════ -->
+<section style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:88px 0;">
+  <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;">
+    <div>
+      <p style="font-size:.72rem;font-weight:700;color:#fb923c;text-transform:uppercase;letter-spacing:.15em;margin-bottom:12px;">For Hosts</p>
+      <h2 style="font-size:2.25rem;font-weight:800;color:#fff;line-height:1.2;margin-bottom:18px;">Share Your Passion,<br/>Earn Doing It</h2>
+      <p style="color:rgba(255,255,255,.7);font-size:.95rem;line-height:1.75;margin-bottom:32px;">Turn your skills and local knowledge into memorable experiences. Set your own schedule, price, and style.</p>
+      <a href="{{ url_for('host') }}" class="btn-orange" style="font-size:.9rem;padding:14px 32px;">Start Hosting Today</a>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      {% for stat, label in [('Rs 5,000+','Avg. host earns/month'),('4.9★','Average rating'),('Free','To list your activity'),('24/7','Support available')] %}
+      <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:24px;border:1px solid rgba(255,255,255,.1);">
+        <p style="font-size:1.2rem;font-weight:800;color:#f97316;">{{ stat }}</p>
+        <p style="font-size:.8rem;color:rgba(255,255,255,.6);margin-top:6px;">{{ label }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<style>
+@media(max-width:1024px){.exp-grid{grid-template-columns:repeat(3,1fr)!important;}}
+@media(max-width:768px){.exp-grid{grid-template-columns:repeat(2,1fr)!important;}}
+@media(max-width:480px){.exp-grid{grid-template-columns:1fr!important;}}
+</style>
+
+{% endblock %}

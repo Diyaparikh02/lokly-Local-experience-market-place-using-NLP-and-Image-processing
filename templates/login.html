@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Login — Lokly{% endblock %}
+{% block content %}
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:48px 16px;">
+  <div class="fade-in" style="width:100%;max-width:440px;">
+    <div style="background:#fff;border-radius:20px;padding:44px;box-shadow:0 4px 32px rgba(0,0,0,.1);">
+      <div style="text-align:center;margin-bottom:32px;">
+        <span style="font-size:1.75rem;font-weight:800;color:#f97316;">Lokly</span>
+        <h1 style="font-size:1.375rem;font-weight:700;color:#111;margin-top:8px;">Welcome back</h1>
+        <p style="color:#888;font-size:.875rem;margin-top:4px;">Login to explore local experiences</p>
+      </div>
+      <form action="{{ url_for('login') }}" method="POST">
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Email address</label>
+          <input type="email" name="email" required placeholder="you@example.com" class="input-field"/>
+        </div>
+        <div style="margin-bottom:28px;">
+          <label style="display:block;font-size:.8rem;font-weight:600;color:#444;margin-bottom:7px;">Password</label>
+          <input type="password" name="password" required placeholder="••••••••" class="input-field"/>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%;padding:13px;">Login</button>
+      </form>
+      <p style="text-align:center;font-size:.875rem;color:#888;margin-top:24px;">
+        Don't have an account? <a href="{{ url_for('register') }}" style="color:#f97316;font-weight:600;text-decoration:none;">Sign up free</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
