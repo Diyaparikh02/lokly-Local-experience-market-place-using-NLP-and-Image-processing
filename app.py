@@ -243,7 +243,29 @@ def ensure_tables():
             )
         """)
 
-        # 6️⃣ Add payment_status to user_bookings if not exists
+        # 6️⃣ CATEGORIES table + seed rows
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS categories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL UNIQUE,
+                slug VARCHAR(100) NOT NULL UNIQUE
+            )
+        """)
+        cursor.execute("SELECT COUNT(*) as cnt FROM categories")
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.executemany(
+                "INSERT INTO categories (name, slug) VALUES (%s, %s)",
+                [
+                    ("Art & Culture",  "art-culture"),
+                    ("Culinary Arts",  "culinary-arts"),
+                    ("Dance",          "dance"),
+                    ("Wellness",       "wellness"),
+                    ("Adventure",      "adventure"),
+                    ("Other",          "other"),
+                ]
+            )
+
+        # 7️⃣ Add payment_status to user_bookings if not exists
         try:
             cursor.execute("""
                 ALTER TABLE user_bookings
@@ -362,25 +384,30 @@ CATEGORY_IMAGES = {
     "other":         "/static/images/home.png",
 }
 
+DEFAULT_CATEGORIES = [
+    {"slug": "art-culture",   "name": "Art & Culture",  "image": "/static/images/art.jpg"},
+    {"slug": "culinary-arts", "name": "Culinary Arts",  "image": "/static/images/pp7.png"},
+    {"slug": "dance",         "name": "Dance",          "image": "/static/images/kathak.jpg"},
+    {"slug": "wellness",      "name": "Wellness",       "image": "/static/images/yoga.jpg"},
+    {"slug": "adventure",     "name": "Adventure",      "image": "/static/images/himtrek.jpg"},
+]
+
 def get_categories_from_db():
     """Read categories from the DB categories table."""
     try:
+        ensure_connection()
         c = db.cursor(dictionary=True)
         c.execute("SELECT name, slug FROM categories ORDER BY id")
         rows = c.fetchall()
+        if not rows:
+            return DEFAULT_CATEGORIES
         return [
             {"slug": r["slug"], "name": r["name"],
              "image": CATEGORY_IMAGES.get(r["slug"], "/static/images/home.png")}
             for r in rows
         ]
     except Exception:
-        return [
-            {"slug": "art-culture",   "name": "Art & Culture",  "image": "/static/images/art.jpg"},
-            {"slug": "culinary-arts", "name": "Culinary Arts",  "image": "/static/images/pp7.png"},
-            {"slug": "dance",         "name": "Dance",          "image": "/static/images/kathak.jpg"},
-            {"slug": "wellness",      "name": "Wellness",       "image": "/static/images/yoga.jpg"},
-            {"slug": "adventure",     "name": "Adventure",      "image": "/static/images/himtrek.jpg"},
-        ]
+        return DEFAULT_CATEGORIES
 
 
 # ── Single source of truth for all static/dummy activities ──────────────────
