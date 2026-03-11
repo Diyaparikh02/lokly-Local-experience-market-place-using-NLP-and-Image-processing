@@ -17,7 +17,6 @@ import stripe
 from dotenv import load_dotenv
 import math
 import numpy as np
-from sentence_transformers import SentenceTransformer
 import requests as http_requests
 import threading
 import io as _io
@@ -475,6 +474,7 @@ def _get_nlp_model():
     global _nlp_model
     if _nlp_model is None:
         print("Loading NLP model (all-MiniLM-L6-v2)...")
+        from sentence_transformers import SentenceTransformer
         _nlp_model = SentenceTransformer('all-MiniLM-L6-v2')
     return _nlp_model
 
@@ -1425,6 +1425,7 @@ _clip_model = None
 def _get_clip_model():
     global _clip_model
     if _clip_model is None:
+        from sentence_transformers import SentenceTransformer
         print("Loading CLIP model (clip-ViT-B-32) for image-based search...")
         _clip_model = SentenceTransformer('clip-ViT-B-32')
     return _clip_model
@@ -2586,6 +2587,12 @@ def image_search():
         })
 
     return jsonify({"results": results})
+
+
+# ---- Health ping (keeps Render free tier warm) ----
+@app.route("/ping")
+def ping():
+    return "pong", 200
 
 
 # ---- TEMP one-time fix route (remove after use) ----
