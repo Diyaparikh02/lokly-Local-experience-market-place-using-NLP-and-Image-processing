@@ -171,9 +171,16 @@ except Error as e:
 def ensure_connection():
     """Ping the DB and reconnect (with a fresh cursor) if the connection dropped."""
     global db, cursor
+    if db is None:
+        try:
+            db = mysql.connector.connect(**_db_kwargs)
+            cursor = db.cursor(dictionary=True)
+            print("[OK] MySQL connected (was None).")
+        except Exception as e:
+            print(f"[ERROR] MySQL connect failed: {e}")
+        return
     try:
         db.ping(reconnect=True, attempts=3, delay=2)
-        # After a reconnect ping the old cursor is stale – recreate it
         cursor = db.cursor(dictionary=True)
     except Exception:
         try:
@@ -1841,46 +1848,55 @@ def become_host():
         unique_name = uuid.uuid4().hex[:8]
         filename = secure_filename(image.filename)
         if _CLOUDINARY_CONFIGURED:
-            # Upload to Cloudinary – persists across Render restarts
-            upload_result = cloudinary.uploader.upload(
-                image,
-                public_id=f"lokly/host_activity/{unique_name}",
-                overwrite=True,
-                resource_type="image"
-            )
-            image_filename = upload_result["secure_url"]
+            try:
+                upload_result = cloudinary.uploader.upload(
+                    image,
+                    public_id=f"lokly/host_activity/{unique_name}",
+                    overwrite=True,
+                    resource_type="image"
+                )
+                image_filename = upload_result["secure_url"]
+            except Exception as ce:
+                print(f"[ERROR] Cloudinary upload failed: {ce}")
+                # Fall back to local disk on Cloudinary failure
+                image_filename = f"{unique_name}_{filename}"
+                image.seek(0)
+                image.save(os.path.join(HOST_IMG_FOLDER, image_filename))
         else:
-            # Local disk fallback (not persistent on Render free tier)
             image_filename = f"{unique_name}_{filename}"
-            image_path = os.path.join(HOST_IMG_FOLDER, image_filename)
-            image.save(image_path)
+            image.save(os.path.join(HOST_IMG_FOLDER, image_filename))
 
     # ---------- INSERT INTO DATABASE ----------
-    ensure_connection()
+    try:
+        ensure_connection()
 
-    # Get host email from users table
-    cursor.execute("SELECT email FROM users WHERE id=%s", (host_user_id,))
-    user_row = cursor.fetchone()
-    host_email = user_row["email"] if user_row else ""
+        # Get host email from users table
+        cursor.execute("SELECT email FROM users WHERE id=%s", (host_user_id,))
+        user_row = cursor.fetchone()
+        host_email = user_row["email"] if user_row else ""
 
-    cursor.execute("""
-        INSERT INTO host_activity
-        (host_user_id, name, email, title, description, location, price, image_filename, category, session_link)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """, (
-        host_user_id,
-        name,
-        host_email,
-        title,
-        description,
-        location,
-        price,
-        image_filename,
-        category,
-        session_link
-    ))
+        cursor.execute("""
+            INSERT INTO host_activity
+            (host_user_id, name, email, title, description, location, price, image_filename, category, session_link)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            host_user_id,
+            name,
+            host_email,
+            title,
+            description,
+            location,
+            price,
+            image_filename,
+            category,
+            session_link
+        ))
 
-    db.commit()
+        db.commit()
+    except Exception as e:
+        print(f"[ERROR] become_host DB insert failed: {e}")
+        flash(f"Error saving activity: {e}", "danger")
+        return redirect(url_for("host"))
 
     session["is_host"] = True
 
