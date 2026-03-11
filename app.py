@@ -2157,22 +2157,45 @@ def confirm_payment():
     except stripe.error.StripeError as e:
         return jsonify({"success": False, "error": str(e.user_message)}), 400
 
-    cur = db.cursor()
+    try:
+        ensure_connection()
+        cur = db.cursor()
+    except Exception as e:
+        print(f"[ERROR] confirm_payment DB connect failed: {e}")
+        return jsonify({"success": False, "error": "Database connection error. Your payment may have succeeded — please contact support with your payment ID."}), 500
+
+    try:
+        if intent["status"] == "succeeded":
+            cur.execute(
+                "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
+                (payment_intent_id, payment_intent_id)
+            )
+            cur.execute(
+                "UPDATE user_bookings SET payment_status='paid' WHERE id=%s",
+                (booking_id,)
+            )
+            db.commit()
+            cur.close()
+        else:
+            cur.execute(
+                "UPDATE payments SET status='failed' WHERE payment_gateway_order_id=%s",
+                (payment_intent_id,)
+            )
+            cur.execute(
+                "UPDATE user_bookings SET payment_status='failed' WHERE id=%s",
+                (booking_id,)
+            )
+            db.commit()
+            cur.close()
+            return jsonify({"success": False, "error": "Payment not completed. Please try again."}), 400
+    except Exception as e:
+        print(f"[ERROR] confirm_payment DB update failed: {e}")
+        return jsonify({"success": False, "error": f"DB error updating booking. Your payment ID is {payment_intent_id} — please contact support."}), 500
 
     if intent["status"] == "succeeded":
-        cur.execute(
-            "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
-            (payment_intent_id, payment_intent_id)
-        )
-        cur.execute(
-            "UPDATE user_bookings SET payment_status='paid' WHERE id=%s",
-            (booking_id,)
-        )
-        db.commit()
-        cur.close()
-
         # ---- Send confirmation emails (non-blocking) ----
         try:
+            ensure_connection()
             ecur = db.cursor(dictionary=True)
             ecur.execute("""
                 SELECT
@@ -2243,18 +2266,6 @@ def confirm_payment():
 
         flash("Payment successful! Your booking is confirmed.", "success")
         return jsonify({"success": True}), 200
-    else:
-        cur.execute(
-            "UPDATE payments SET status='failed' WHERE payment_gateway_order_id=%s",
-            (payment_intent_id,)
-        )
-        cur.execute(
-            "UPDATE user_bookings SET payment_status='failed' WHERE id=%s",
-            (booking_id,)
-        )
-        db.commit()
-        cur.close()
-        return jsonify({"success": False, "error": "Payment not completed. Please try again."}), 400
 
 
 
