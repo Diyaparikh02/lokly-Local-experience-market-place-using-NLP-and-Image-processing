@@ -388,8 +388,14 @@ FEATURED_IDS = {1, 2, 3}
 
 
 # ── NLP Semantic Search Setup ─────────────────────────────────────────────────
-print("Loading NLP model (all-MiniLM-L6-v2)...")
-_nlp_model = SentenceTransformer('all-MiniLM-L6-v2')
+_nlp_model = None
+
+def _get_nlp_model():
+    global _nlp_model
+    if _nlp_model is None:
+        print("Loading NLP model (all-MiniLM-L6-v2)...")
+        _nlp_model = SentenceTransformer('all-MiniLM-L6-v2')
+    return _nlp_model
 
 # ── Per-category concept tags ──────────────────────────────────────────────
 CATEGORY_TAGS = {
@@ -979,14 +985,20 @@ def _activity_text(e):
         text += f" Activity concepts: {act_tags}."
     return text.lower()
 
-# Pre-compute normalized embeddings for static activities ONCE at startup
+# Lazy-load static NLP embeddings on first search
 _static_texts      = [_activity_text(e) for e in STATIC_ACTIVITIES]
-_static_embeddings = _nlp_model.encode(
-    _static_texts,
-    convert_to_numpy=True,
-    normalize_embeddings=True,   # unit vectors → dot product == cosine similarity
-)
-print(f"NLP ready. {len(STATIC_ACTIVITIES)} static embeddings precomputed.")
+_static_embeddings = None
+
+def _get_static_embeddings():
+    global _static_embeddings
+    if _static_embeddings is None:
+        _static_embeddings = _get_nlp_model().encode(
+            _static_texts,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        )
+        print(f"NLP ready. {len(STATIC_ACTIVITIES)} static embeddings precomputed.")
+    return _static_embeddings
 
 
 # ── CLIP Image-Search Setup ────────────────────────────────────────────────
@@ -1327,25 +1339,35 @@ def _get_clip_prompts(e):
     key = e.get("title", "").strip().lower()
     return _CLIP_VISUAL_PROMPTS.get(key) or _clip_fallback_prompts(e)
 
+_clip_model = None
+
+def _get_clip_model():
+    global _clip_model
+    if _clip_model is None:
+        print("Loading CLIP model (clip-ViT-B-32) for image-based search...")
+        _clip_model = SentenceTransformer('clip-ViT-B-32')
+    return _clip_model
+
 def _encode_prompts(prompts):
     """Encode a list of text prompts and return normalised embeddings."""
-    embs = _clip_model.encode(
+    embs = _get_clip_model().encode(
         prompts, convert_to_numpy=True,
         normalize_embeddings=True, show_progress_bar=False,
     )  # shape (n_prompts, 512)
     return embs  # already unit-normalised
 
-print("Loading CLIP model (clip-ViT-B-32) for image-based search...")
-_clip_model = SentenceTransformer('clip-ViT-B-32')
+# Lazy-load CLIP static embeddings on first image search
+_clip_static_prompt_embs = None
 
-# Pre-compute multi-prompt embeddings for all static activities.
-# _clip_static_prompt_embs is a list of arrays, one per activity.
-# Each array has shape (n_prompts, 512).
-_clip_static_prompt_embs = [
-    _encode_prompts(_get_clip_prompts(e))
-    for e in STATIC_ACTIVITIES
-]
-print(f"CLIP ready. {len(STATIC_ACTIVITIES)} static activities with multi-prompt embeddings.")
+def _get_clip_static_embs():
+    global _clip_static_prompt_embs
+    if _clip_static_prompt_embs is None:
+        _clip_static_prompt_embs = [
+            _encode_prompts(_get_clip_prompts(e))
+            for e in STATIC_ACTIVITIES
+        ]
+        print(f"CLIP ready. {len(STATIC_ACTIVITIES)} static activities with multi-prompt embeddings.")
+    return _clip_static_prompt_embs
 
 
 def get_hosted_activities():
@@ -1443,22 +1465,22 @@ def search_experiences(query=None, city=None):
     try:
         if len(pool) == len(all_acts):
             if hosted:
-                hosted_embs = _nlp_model.encode(
+                hosted_embs = _get_nlp_model().encode(
                     [_activity_text(e) for e in hosted],
                     convert_to_numpy=True,
                     normalize_embeddings=True,
                 )
-                pool_embeddings = np.vstack([_static_embeddings, hosted_embs])
+                pool_embeddings = np.vstack([_get_static_embeddings(), hosted_embs])
             else:
-                pool_embeddings = _static_embeddings
+                pool_embeddings = _get_static_embeddings()
         else:
-            pool_embeddings = _nlp_model.encode(
+            pool_embeddings = _get_nlp_model().encode(
                 [_activity_text(e) for e in pool],
                 convert_to_numpy=True,
                 normalize_embeddings=True,
             )
 
-        q_emb    = _nlp_model.encode([ql], convert_to_numpy=True, normalize_embeddings=True)
+        q_emb    = _get_nlp_model().encode([ql], convert_to_numpy=True, normalize_embeddings=True)
         sem_scores = (q_emb @ pool_embeddings.T).flatten().tolist()
 
     except Exception as e:
@@ -2391,13 +2413,13 @@ def image_search():
         return jsonify({"error": f"Could not read image: {ex}"}), 400
 
     # Encode image with CLIP → normalised unit vector
-    img_emb = _clip_model.encode(img, convert_to_numpy=True,
-                                  normalize_embeddings=True, show_progress_bar=False)
+    img_emb = _get_clip_model().encode(img, convert_to_numpy=True,
+                                       normalize_embeddings=True, show_progress_bar=False)
 
     # Score static activities: for each activity take MAX score across its prompts
     # (prompt ensemble — significantly improves per-activity accuracy)
     all_scored = []
-    for prompt_embs, act in zip(_clip_static_prompt_embs, STATIC_ACTIVITIES):
+    for prompt_embs, act in zip(_get_clip_static_embs(), STATIC_ACTIVITIES):
         # prompt_embs shape: (n_prompts, 512), img_emb shape: (512,)
         scores_per_prompt = prompt_embs @ img_emb          # shape (n_prompts,)
         best_score = float(scores_per_prompt.max())
