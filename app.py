@@ -132,12 +132,16 @@ def build_host_email(host_name, username, user_email, activity_title, booking_da
 
 # -------- MySQL Connection --------
 try:
-    db = mysql.connector.connect(
+    _db_kwargs = dict(
         host=os.getenv("DB_HOST", "localhost"),
+        port=int(os.getenv("DB_PORT", 3306)),
         user=os.getenv("DB_USER", "root"),
         password=os.getenv("DB_PASSWORD", ""),
-        database=os.getenv("DB_NAME", "mywebsite")
+        database=os.getenv("DB_NAME", "mywebsite"),
     )
+    if os.getenv("DB_HOST", "localhost") != "localhost":
+        _db_kwargs["ssl_disabled"] = False
+    db = mysql.connector.connect(**_db_kwargs)
     cursor = db.cursor(dictionary=True)
     print("[OK] MySQL Database connected successfully!")
 except Error as e:
