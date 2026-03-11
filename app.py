@@ -149,6 +149,22 @@ except Error as e:
     db = None
     cursor = None
 
+# -------- Auto-reconnect helper --------
+def ensure_connection():
+    """Ping the DB and reconnect (with a fresh cursor) if the connection dropped."""
+    global db, cursor
+    try:
+        db.ping(reconnect=True, attempts=3, delay=2)
+        # After a reconnect ping the old cursor is stale – recreate it
+        cursor = db.cursor(dictionary=True)
+    except Exception:
+        try:
+            db = mysql.connector.connect(**_db_kwargs)
+            cursor = db.cursor(dictionary=True)
+            print("[OK] MySQL reconnected successfully.")
+        except Exception as e:
+            print(f"[ERROR] MySQL reconnect failed: {e}")
+
 # -------- Ensure tables exist (idempotent) --------
 def ensure_tables():
         if not cursor:
@@ -2165,6 +2181,7 @@ def confirm_payment():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        ensure_connection()
         username = request.form["username"]
         email = request.form["email"]
         password = bcrypt.generate_password_hash(request.form["password"]).decode("utf-8")
@@ -2184,6 +2201,7 @@ from flask import session, redirect, url_for
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        ensure_connection()
         email = request.form["email"]
         password = request.form["password"]
 
