@@ -22,6 +22,11 @@ import requests as http_requests
 import threading
 import io as _io
 from PIL import Image as PILImage
+try:
+    import cloudinary
+    import cloudinary.uploader
+except ImportError:
+    cloudinary = None
 
 load_dotenv()
 
@@ -33,6 +38,19 @@ bcrypt = Bcrypt(app)
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 stripe.api_key = STRIPE_SECRET_KEY
+
+# -------- Cloudinary Setup (for persistent image uploads on Render) --------
+_CLOUDINARY_CONFIGURED = False
+if cloudinary and os.getenv("CLOUDINARY_CLOUD_NAME"):
+    cloudinary.config(
+        cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+        api_key=os.getenv("CLOUDINARY_API_KEY"),
+        api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    )
+    _CLOUDINARY_CONFIGURED = True
+    print("[OK] Cloudinary configured.")
+else:
+    print("[WARN] Cloudinary not configured – images will use local disk (not persistent on Render).")
 
 # -------- Brevo SMTP Email Setup --------
 import smtplib, sys as _mail_sys
@@ -302,6 +320,15 @@ HOST_IMG_FOLDER = os.path.join(app.root_path, "static", "images")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(HOST_IMG_FOLDER, exist_ok=True)
 
+def _resolve_img_url(fn):
+    """Return a displayable image URL from the stored image_filename value.
+    Handles: Cloudinary https URLs, legacy local filenames, and None."""
+    if not fn:
+        return "/static/images/home.png"
+    if fn.startswith("http"):
+        return fn  # Cloudinary URL stored directly
+    return f"/static/uploads/host_activity/{fn}"
+
 # -------- Dummy Data (for experiences only) --------
 # -------- Full Dummy Data (for experiences – expanded to match category_page) --------
 experiences = [
@@ -360,7 +387,7 @@ def db_activities_as_cards():
             "title": r["title"],
             "location": r.get("location"),
             "price": float(r["price"]) if r["price"] is not None else 0,
-            "image_url": f"/static/uploads/host_activity/{r['image_filename']}" if r.get("image_filename") else "/static/images/home.png",
+        "image_url": _resolve_img_url(r.get("image_filename")),
             "description": r.get("description", ""),
             "category": r.get("category", ""),
             "host_name": r.get("name", ""),
@@ -1431,12 +1458,11 @@ def get_hosted_activities():
                 "title": r["title"],
                 "location": r.get("location") or "",
                 "price": float(r["price"]) if r["price"] else 0,
-                "image_url": (f"/static/uploads/host_activity/{r['image_filename']}"
-                              if r.get("image_filename") else "/static/images/home.png"),
-                "description": r.get("description") or "",
-                "category": r.get("category") or "Other",
-                "total_bookings": int(r.get("total_bookings") or 0),
-                "total_clicks":   int(r.get("total_clicks")   or 0),
+            "image_url": _resolve_img_url(r.get("image_filename")),
+            "description": r.get("description") or "",
+            "category": r.get("category") or "Other",
+            "total_bookings": int(r.get("total_bookings") or 0),
+            "total_clicks":   int(r.get("total_clicks")   or 0),
             })
         return result
     except Exception:
@@ -1812,14 +1838,22 @@ def become_host():
     image_filename = None
 
     if image and image.filename:
-        # Create unique filename
         unique_name = uuid.uuid4().hex[:8]
         filename = secure_filename(image.filename)
-        image_filename = f"{unique_name}_{filename}"
-
-        # Save image
-        image_path = os.path.join(HOST_IMG_FOLDER, image_filename)
-        image.save(image_path)
+        if _CLOUDINARY_CONFIGURED:
+            # Upload to Cloudinary – persists across Render restarts
+            upload_result = cloudinary.uploader.upload(
+                image,
+                public_id=f"lokly/host_activity/{unique_name}",
+                overwrite=True,
+                resource_type="image"
+            )
+            image_filename = upload_result["secure_url"]
+        else:
+            # Local disk fallback (not persistent on Render free tier)
+            image_filename = f"{unique_name}_{filename}"
+            image_path = os.path.join(HOST_IMG_FOLDER, image_filename)
+            image.save(image_path)
 
     # ---------- INSERT INTO DATABASE ----------
     cursor = db.cursor()
@@ -1868,7 +1902,7 @@ def experience_detail(id):
         "title": rec["title"],
         "location": rec.get("location"),
         "price": float(rec["price"]) if rec["price"] is not None else 0,
-        "image_url": f"/static/uploads/host_activity/{rec['image_filename']}" if rec.get("image_filename") else "/static/images/home.png",
+        "image_url": _resolve_img_url(rec.get("image_filename")),
         "description": rec.get("description", ""),
         "host_name": rec.get("name"),
         "session_link": rec.get("session_link"),
@@ -2009,8 +2043,7 @@ def checkout(id):
             "title": rec["title"],
             "price": float(rec["price"]) if rec["price"] else 0,
             "location": rec.get("location", ""),
-            "image_url": (f"/static/uploads/host_activity/{rec['image_filename']}"
-                          if rec.get("image_filename") else "/static/images/home.png"),
+            "image_url": _resolve_img_url(rec.get("image_filename")),
         }
     else:
         flash("Only hosted activities support online payment.", "danger")
