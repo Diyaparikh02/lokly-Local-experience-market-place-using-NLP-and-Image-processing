@@ -9,7 +9,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Inter',system-ui,sans-serif;background:#f8f9fa;color:#222;line-height:1.6;}
+    html{scroll-behavior:smooth;overflow-x:hidden;max-width:100%;}
+    body{font-family:'Inter',system-ui,sans-serif;background:#f8f9fa;color:#222;line-height:1.6;overflow-x:hidden;max-width:100%;}
+    img,video,iframe,embed{max-width:100%;}
+    /* Prevent any element from causing horizontal scroll */
+    section,article,aside,header,main,footer,nav{max-width:100%;overflow-x:visible;}
     /* ── Animations ── */
     @keyframes fadeInUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
     .fade-in{animation:fadeInUp .5s ease both;}
@@ -33,20 +37,119 @@
     .input-field:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.12);}
     /* ── Section ── */
     .section{padding:72px 0;}
-    .container{max-width:1200px;margin:0 auto;padding:0 24px;}
+    .container{max-width:1200px;margin:0 auto;padding:0 24px;width:100%;}
     /* ── Flash ── */
     .flash-success{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:10px;padding:12px 16px;font-size:.875rem;font-weight:500;}
     .flash-danger{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;font-size:.875rem;font-weight:500;}
     .flash-info,.flash-warning{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:10px;padding:12px 16px;font-size:.875rem;font-weight:500;}
     /* ── Mobile hamburger ── */
     #mobile-menu{display:none;}
+    #hamburger{display:none;}
     @media(max-width:768px){
-      .desktop-nav{display:none;}
-      #hamburger{display:flex;}
+      .desktop-nav{display:none!important;}
+      #hamburger{display:flex!important;}
       #mobile-menu.open{display:flex;}
     }
     /* ── Smooth scroll ── */
     html{scroll-behavior:smooth;}
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE LAYOUT — all breakpoints
+    ══════════════════════════════════════════ */
+
+    /* Footer grid: 4-col → 2-col → 1-col */
+    .resp-footer-grid{
+      display:grid;
+      grid-template-columns:2fr 1fr 1fr 1fr;
+      gap:40px;
+      margin-bottom:48px;
+    }
+    @media(max-width:900px){
+      .resp-footer-grid{grid-template-columns:1fr 1fr;gap:28px;}
+    }
+    @media(max-width:480px){
+      .resp-footer-grid{grid-template-columns:1fr;gap:20px;}
+    }
+
+    /* Category grid: 5 → 3 → 2 */
+    .resp-cat-grid{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:16px;
+    }
+    @media(max-width:900px){
+      .resp-cat-grid{grid-template-columns:repeat(3,1fr);}
+    }
+    @media(max-width:560px){
+      .resp-cat-grid{grid-template-columns:repeat(2,1fr);}
+    }
+
+    /* Image / NLP results grid: 4 → 2 → 1 */
+    .resp-results-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:22px;
+    }
+    @media(max-width:900px){
+      .resp-results-grid{grid-template-columns:repeat(2,1fr);}
+    }
+    @media(max-width:480px){
+      .resp-results-grid{grid-template-columns:1fr;}
+    }
+
+    /* Trust strip: 3-col → 1-col on very small */
+    .resp-trust-strip{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:16px;
+      text-align:center;
+    }
+    @media(max-width:420px){
+      .resp-trust-strip{grid-template-columns:1fr;gap:12px;}
+    }
+
+    /* Hero section height */
+    .hero-section{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;height:580px;}
+    @media(max-width:768px){.hero-section{height:480px;}}
+    @media(max-width:480px){.hero-section{height:420px;}}
+
+    /* Hero search pill */
+    .hero-search-form{
+      display:flex;align-items:center;
+      background:#fff;border-radius:999px;
+      padding:6px 6px 6px 22px;
+      box-shadow:0 8px 32px rgba(0,0,0,.2);
+      max-width:560px;width:100%;
+      margin:0 auto;gap:8px;
+    }
+    @media(max-width:560px){
+      .hero-search-form{padding:5px 5px 5px 14px;gap:4px;max-width:100%;}
+      .hero-explore-label{display:none;} /* hide text, show icon only if needed */
+    }
+
+    /* Section padding shrinks on mobile */
+    @media(max-width:768px){
+      .section{padding:40px 0;}
+      .container{padding:0 16px;}
+      .form-card{padding:24px 20px;}
+      .auth-card{padding:28px 20px;}
+      .dash-hero{flex-direction:column;text-align:center;gap:12px;}
+      .experience-detail{grid-template-columns:1fr;}
+    }
+
+    /* Activity / booking list items on mobile */
+    @media(max-width:540px){
+      .booking-item{flex-direction:column;align-items:flex-start;gap:8px;}
+      .activity-item{flex-direction:column;align-items:flex-start;gap:12px;}
+      .activity-item .ai-right{flex-direction:row;align-items:center;gap:16px;}
+    }
+
+    /* Cards always readable on phone */
+    @media(max-width:480px){
+      .cards{grid-template-columns:1fr;}
+      .hero-text h1{font-size:1.75rem;}
+      .hero-text{left:16px;bottom:20px;}
+    }
   </style>
 </head>
 <body>
@@ -72,7 +175,7 @@
 
     <!-- Right links (desktop) -->
     <nav class="desktop-nav" style="display:flex;align-items:center;gap:4px;">
-      <a href="{{ url_for('all_experiences') }}" class="nav-link">Experiences</a>
+      <a href="{{ url_for('home') }}" class="nav-link">Home</a>
       <a href="{{ url_for('host') }}" class="nav-link">Become a Host</a>
       <a href="{{ url_for('about') }}" class="nav-link">About</a>
       {% if session.get('user_id') %}
@@ -90,7 +193,8 @@
 
     <!-- Hamburger (mobile) -->
     <button id="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')"
-            style="display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:6px;">
+            style="flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:8px;border-radius:8px;transition:background .2s;"
+            onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='transparent'">
       <span style="width:22px;height:2px;background:#333;border-radius:2px;display:block;"></span>
       <span style="width:22px;height:2px;background:#333;border-radius:2px;display:block;"></span>
       <span style="width:22px;height:2px;background:#333;border-radius:2px;display:block;"></span>
@@ -104,7 +208,6 @@
       <button type="submit" class="btn-orange">Go</button>
     </form>
     <a href="{{ url_for('home') }}" class="nav-link" style="display:block;margin:4px 0;">Home</a>
-    <a href="{{ url_for('all_experiences') }}" class="nav-link" style="display:block;margin:4px 0;">Experiences</a>
     <a href="{{ url_for('host') }}" class="nav-link" style="display:block;margin:4px 0;">Become a Host</a>
     <a href="{{ url_for('about') }}" class="nav-link" style="display:block;margin:4px 0;">About</a>
     {% if session.get('user_id') %}
@@ -140,7 +243,7 @@
 <!-- ══ FOOTER ══════════════════════════════════════════════════ -->
 <footer style="background:#111;color:#aaa;margin-top:80px;">
   <div class="container" style="padding-top:56px;padding-bottom:56px;">
-    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px;">
+    <div class="resp-footer-grid">
       <div>
         <span style="font-size:1.5rem;font-weight:800;color:#f97316;">Lokly</span>
         <p style="margin-top:12px;font-size:.875rem;line-height:1.7;max-width:260px;">Discover authentic local experiences handpicked by passionate hosts across India and beyond.</p>

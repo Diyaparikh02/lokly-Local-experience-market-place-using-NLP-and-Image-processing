@@ -42,7 +42,13 @@
 
   <!-- ── EXPERIENCE CARDS ─────────────────────────────────────── -->
   {% if experiences %}
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;">
+  <style>
+    .exp-all-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;}
+    @media(max-width:1024px){.exp-all-grid{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:768px){.exp-all-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:480px){.exp-all-grid{grid-template-columns:1fr;}}
+  </style>
+  <div class="exp-all-grid">
     {% for exp in experiences %}
     <a href="{{ url_for('experience_detail', id=exp.id) }}" class="card fade-in" style="text-decoration:none;">
       <div style="height:200px;overflow:hidden;position:relative;">

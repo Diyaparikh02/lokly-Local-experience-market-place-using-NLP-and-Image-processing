@@ -7,12 +7,12 @@
     &#8592; Back to experiences
   </a>
 
-  <div style="display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:start;">
+  <div class="resp-detail-grid">
 
     <!-- LEFT -->
     <div>
       <!-- Main image -->
-      <div style="border-radius:20px;overflow:hidden;height:420px;background:#f5f5f5;">
+      <div class="media-img-wrap" style="border-radius:20px;overflow:hidden;height:420px;background:#f5f5f5;">
         <img src="{{ experience.image_url }}"
              onerror="this.src='/static/images/home.png'"
              alt="{{ experience.title }}"
@@ -62,7 +62,7 @@
     </div>
 
     <!-- RIGHT: Booking card -->
-    <div style="position:sticky;top:88px;">
+    <div class="resp-booking-sticky" style="position:sticky;top:88px;">
       <div style="background:#fff;border-radius:20px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.1);border:1px solid #f0f0f0;">
         <div style="margin-bottom:24px;">
           <span style="font-size:2rem;font-weight:800;color:#f97316;">&#8377;{{ experience.price }}</span>

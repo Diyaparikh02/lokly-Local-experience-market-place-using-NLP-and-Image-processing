@@ -14,7 +14,7 @@
   </div>
 
   <!-- Stats -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px;">
+  <div class="resp-stats-grid">
     {% for val, lbl, icon in [(activities|length,'Total Activities','🏠'),('Live','Status','🟢'),('Open','Bookings','📋')] %}
     <div style="background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,.05);display:flex;align-items:center;gap:16px;">
       <span style="font-size:1.75rem;">{{ icon }}</span>
@@ -34,9 +34,9 @@
 
     {% if activities %}
       {% for act in activities %}
-      <div style="padding:20px 28px;border-bottom:1px solid #f9f9f9;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .2s;"
+      <div class="resp-activity-row" style="padding:20px 28px;border-bottom:1px solid #f9f9f9;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .2s;"
            onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='#fff'">
-        <div style="display:flex;align-items:center;gap:14px;">
+        <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
           {% if act.image_filename %}
             <img src="/static/uploads/host_activity/{{ act.image_filename }}" alt=""
                  style="width:52px;height:52px;border-radius:12px;object-fit:cover;flex-shrink:0;"/>
@@ -48,8 +48,19 @@
             <p style="font-size:.8rem;color:#888;margin-top:3px;">{{ act.category }} &bull; <strong style="color:#f97316;">{{ act.total_bookings }}</strong> bookings</p>
           </div>
         </div>
-        <a href="{{ url_for('host_activity_bookings', activity_id=act.id) }}"
-           class="btn-secondary" style="font-size:.8rem;padding:8px 18px;flex-shrink:0;">View Bookings</a>
+        <div class="resp-activity-actions" style="display:flex;align-items:center;gap:8px;">
+          <a href="{{ url_for('host_activity_bookings', activity_id=act.id) }}"
+             class="btn-secondary" style="font-size:.8rem;padding:8px 18px;">View Bookings</a>
+          <form method="POST" action="{{ url_for('delete_activity', activity_id=act.id) }}"
+                onsubmit="return confirm('Delete this activity? All bookings will also be removed. This cannot be undone.');"
+                style="margin:0;">
+            <button type="submit"
+                    style="font-size:.8rem;padding:8px 16px;border-radius:8px;border:1.5px solid #fecaca;background:#fff;color:#dc2626;font-weight:700;cursor:pointer;transition:background .2s;"
+                    onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fff'">
+              Delete
+            </button>
+          </form>
+        </div>
       </div>
       {% endfor %}
     {% else %}

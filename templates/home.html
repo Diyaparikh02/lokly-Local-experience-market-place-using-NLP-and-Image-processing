@@ -3,8 +3,8 @@
 {% block content %}
 
 <!-- ══ HERO ════════════════════════════════════════════════════ -->
-<section style="position:relative;height:580px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-  <img src="/static/images/home.png"
+<section class="hero-section">
+  <img src="/static/images/download.jpg"
        onerror="this.src='https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1600&q=80'"
        alt="hero"
        style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(0.45);"/>
@@ -18,18 +18,35 @@
       Book handcrafted activities hosted by passionate locals — cooking, trekking, art, wellness and more.
     </p>
     <!-- Hero search -->
-    <form action="{{ url_for('global_search') }}" method="GET"
-          style="display:flex;align-items:center;background:#fff;border-radius:999px;padding:6px 6px 6px 22px;box-shadow:0 8px 32px rgba(0,0,0,.2);max-width:520px;margin:0 auto;gap:8px;">
-      <svg width="16" height="16" fill="none" stroke="#999" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
-      <input name="q" value="{{ q }}" style="border:none;outline:none;font-size:.9rem;font-family:inherit;width:100%;background:transparent;color:#222;" placeholder="Where do you want to go?"/>
-      <button type="submit" class="btn-primary" style="padding:10px 24px;flex-shrink:0;">Explore</button>
+    <form action="{{ url_for('global_search') }}" method="GET" class="hero-search-form">
+      <!-- Text search icon -->
+      <svg id="hero-search-icon" width="16" height="16" fill="none" stroke="#999" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+      <!-- Tiny image preview (shown after image selected) -->
+      <img id="hero-img-thumb" src="" alt="" style="display:none;width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0;border:2px solid #f97316;"/>
+      <input id="hero-text-input" name="q" value="{{ q }}" style="border:none;outline:none;font-size:.9rem;font-family:inherit;width:100%;background:transparent;color:#222;" placeholder="Search activities or upload a photo..."/>
+      <!-- Camera / clear button -->
+      <button type="button" id="hero-cam-btn"
+              onclick="document.getElementById('hero-img-input').click()"
+              title="Search by image"
+              style="flex-shrink:0;width:36px;height:36px;border-radius:50%;border:none;background:#f5f5f5;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;"
+              onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background='#f5f5f5'">
+        <svg width="16" height="16" fill="none" stroke="#888" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+      </button>
+      <button type="button" id="hero-img-clear-btn" onclick="heroClearImg()"
+              style="display:none;flex-shrink:0;width:28px;height:28px;border-radius:50%;border:none;background:#fef2f2;cursor:pointer;font-size:.8rem;font-weight:700;color:#dc2626;align-items:center;justify-content:center;"
+              title="Clear image">&#x2715;</button>
+      <!-- Hidden file input -->
+      <input type="file" id="hero-img-input" accept="image/*" style="display:none;" onchange="heroImgSelected(this)"/>
+      <!-- Spinner (inside bar, shows while processing) -->
+      <div id="hero-img-spinner" style="display:none;flex-shrink:0;width:24px;height:24px;border:2.5px solid #fed7aa;border-top-color:#f97316;border-radius:50%;animation:spin .8s linear infinite;"></div>
+      <button type="submit" id="hero-explore-btn" class="btn-primary" style="padding:10px 24px;flex-shrink:0;">Explore</button>
     </form>
   </div>
 </section>
 
 <!-- ══ TRUST STRIP ══════════════════════════════════════════════ -->
 <section style="background:#fff;border-bottom:1px solid #f0f0f0;">
-  <div class="container" style="padding-top:28px;padding-bottom:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+  <div class="container resp-trust-strip" style="padding-top:28px;padding-bottom:28px;">
     <div>
       <p style="font-size:1.75rem;font-weight:800;color:#f97316;">500+</p>
       <p style="font-size:.75rem;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;">Experiences</p>
@@ -52,7 +69,7 @@
       <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Browse by type</p>
       <h2 style="font-size:1.875rem;font-weight:800;color:#111;">Explore Categories</h2>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;">
+    <div class="resp-cat-grid">
       {% for cat in categories %}
       <a href="{{ url_for('category_page', slug=cat.slug) }}"
          style="position:relative;border-radius:16px;overflow:hidden;height:150px;text-decoration:none;display:block;box-shadow:0 2px 12px rgba(0,0,0,.08);transition:transform .25s,box-shadow .25s;"
@@ -68,6 +85,144 @@
   </div>
 </section>
 
+<!-- ══ IMAGE SEARCH RESULTS (shown by JS after image upload) ══ -->
+<section id="img-results-section" style="display:none;background:#fff7ed;border-top:1px solid #fed7aa;border-bottom:1px solid #fed7aa;padding:56px 0;">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.15em;margin-bottom:6px;">AI Image Search</p>
+        <h2 id="img-results-heading" style="font-size:1.875rem;font-weight:800;color:#111;"></h2>
+      </div>
+      <button onclick="heroClearImg()" style="font-size:.8rem;font-weight:600;color:#f97316;background:none;border:1.5px solid #f97316;border-radius:999px;padding:6px 16px;cursor:pointer;">&#x2715; Clear image</button>
+    </div>
+    <div id="img-results-grid" class="resp-results-grid exp-grid"></div>
+    <div id="img-no-results" style="display:none;text-align:center;padding:48px 0;">
+      <div style="font-size:3rem;margin-bottom:12px;">&#128247;</div>
+      <p style="color:#999;font-size:1rem;font-weight:500;">No activities matched your image.</p>
+      <p style="color:#bbb;font-size:.85rem;margin-top:6px;">Try a different photo or use the text search above.</p>
+    </div>
+  </div>
+</section>
+
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script>
+(function(){
+  var _imgFile = null;
+
+  window.heroImgSelected = function(input) {
+    if (!input.files || !input.files[0]) return;
+    _imgFile = input.files[0];
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      // Show thumbnail in search bar
+      var thumb = document.getElementById('hero-img-thumb');
+      thumb.src = ev.target.result;
+      thumb.style.display = 'block';
+      document.getElementById('hero-search-icon').style.display = 'none';
+      // Show clear button, hide camera button
+      document.getElementById('hero-cam-btn').style.display = 'none';
+      document.getElementById('hero-img-clear-btn').style.display = 'flex';
+      // Update placeholder
+      var ti = document.getElementById('hero-text-input');
+      ti.value = '';
+      ti.placeholder = _imgFile.name;
+      ti.disabled = true;
+      // Auto-run search
+      _runHeroImageSearch();
+    };
+    reader.readAsDataURL(_imgFile);
+  };
+
+  window.heroClearImg = function() {
+    _imgFile = null;
+    document.getElementById('hero-img-input').value = '';
+    document.getElementById('hero-img-thumb').style.display = 'none';
+    document.getElementById('hero-search-icon').style.display = 'block';
+    document.getElementById('hero-cam-btn').style.display = 'flex';
+    document.getElementById('hero-img-clear-btn').style.display = 'none';
+    document.getElementById('hero-img-spinner').style.display = 'none';
+    var ti = document.getElementById('hero-text-input');
+    ti.value = '';
+    ti.placeholder = 'Search activities or upload a photo...';
+    ti.disabled = false;
+    document.getElementById('hero-explore-btn').disabled = false;
+    document.getElementById('img-results-section').style.display = 'none';
+  };
+
+  function _runHeroImageSearch() {
+    var spinner  = document.getElementById('hero-img-spinner');
+    var exploreBtn = document.getElementById('hero-explore-btn');
+    var section  = document.getElementById('img-results-section');
+    var grid     = document.getElementById('img-results-grid');
+    var noRes    = document.getElementById('img-no-results');
+    var heading  = document.getElementById('img-results-heading');
+
+    spinner.style.display = 'block';
+    exploreBtn.disabled = true;
+    section.style.display = 'none';
+
+    var fd = new FormData();
+    fd.append('image', _imgFile);
+
+    fetch('/image-search', { method: 'POST', body: fd })
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        spinner.style.display = 'none';
+        exploreBtn.disabled = false;
+
+        if (data.error) {
+          heading.textContent = 'Error: ' + data.error;
+          grid.innerHTML = '';
+          noRes.style.display = 'none';
+          section.style.display = 'block';
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+
+        var res = data.results || [];
+        section.style.display = 'block';
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        if (res.length === 0) {
+          heading.textContent = 'No matches found';
+          grid.innerHTML = '';
+          noRes.style.display = 'block';
+          return;
+        }
+
+        noRes.style.display = 'none';
+        heading.textContent = 'Experiences matching your image (' + res.length + ' found)';
+
+        grid.innerHTML = res.map(function(exp) {
+          var imgSrc = exp.image_url || '/static/images/home.png';
+          var catBadge = exp.category
+            ? '<span style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);color:#f97316;font-size:.7rem;font-weight:700;padding:4px 10px;border-radius:999px;">' + exp.category + '</span>'
+            : '';
+          return '<a href="/experience_detail/' + exp.id + '" class="card fade-in">'
+            + '<div style="height:200px;overflow:hidden;position:relative;">'
+            + '<img src="' + imgSrc + '" onerror="this.src=\'\'/static/images/home.png\'" alt="' + exp.title + '" style="width:100%;height:100%;object-fit:cover;transition:transform .35s ease;"/>'
+            + catBadge + '</div>'
+            + '<div style="padding:16px;">'
+            + '<h3 style="font-weight:700;font-size:.95rem;color:#111;line-height:1.35;margin-bottom:6px;">' + exp.title + '</h3>'
+            + '<p style="font-size:.825rem;color:#777;display:flex;align-items:center;gap:4px;"><svg width="12" height="12" fill="#f97316" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>' + exp.location + '</p>'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">'
+            + '<span style="font-weight:800;font-size:1rem;color:#f97316;">&#8377;' + exp.price + '</span>'
+            + '<span style="font-size:.75rem;font-weight:600;background:#fff7ed;color:#f97316;padding:5px 12px;border-radius:999px;border:1px solid #fed7aa;">Book Now</span>'
+            + '</div></div></a>';
+        }).join('');
+      })
+      .catch(function() {
+        spinner.style.display = 'none';
+        exploreBtn.disabled = false;
+        heading.textContent = 'Something went wrong. Please try again.';
+        grid.innerHTML = '';
+        section.style.display = 'block';
+      });
+  }
+})();
+</script>
+
 <!-- ══ SEARCH RESULTS (only shown when a query is active) ══════ -->
 {% if q %}
 <section style="background:#fff7ed;border-top:1px solid #fed7aa;border-bottom:1px solid #fed7aa;padding:56px 0;">
@@ -82,7 +237,7 @@
     </div>
 
     {% if search_results %}
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;" class="exp-grid">
+    <div class="resp-results-grid exp-grid">
       {% for exp in search_results %}
       <a href="{{ url_for('experience_detail', id=exp.id) }}" class="card fade-in">
         <div style="height:200px;overflow:hidden;position:relative;">
@@ -129,8 +284,7 @@
     </div>
 
     {% if experiences %}
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;"
-         class="exp-grid">
+    <div class="resp-results-grid exp-grid">
       {% for exp in experiences %}
       <a href="{{ url_for('experience_detail', id=exp.id) }}" class="card fade-in">
         <div style="height:200px;overflow:hidden;position:relative;">
@@ -170,7 +324,7 @@
   <div class="container" style="text-align:center;">
     <p style="font-size:.72rem;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.15em;margin-bottom:8px;">Simple &amp; Easy</p>
     <h2 style="font-size:1.875rem;font-weight:800;color:#111;margin-bottom:48px;">How Lokly Works</h2>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;max-width:900px;margin:0 auto;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;max-width:900px;margin:0 auto;" class="resp-how-grid">
       {% for step, icon, desc in [('Browse Experiences','🔍','Search hundreds of unique local activities near you.'),('Book Instantly','📅','Pick a date, confirm, and get ready to explore.'),('Experience &amp; Enjoy','🌟','Meet your host and create unforgettable memories.')] %}
       <div style="background:#fff;border-radius:16px;padding:32px 24px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
         <div style="font-size:2.5rem;margin-bottom:16px;">{{ icon }}</div>
@@ -183,15 +337,15 @@
 </section>
 
 <!-- ══ HOST CTA ══════════════════════════════════════════════════ -->
-<section style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:88px 0;">
-  <div class="container" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;">
+<section class="host-cta-section" style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:88px 0;">
+  <div class="container resp-host-cta-grid" style="gap:60px;align-items:center;">
     <div>
       <p style="font-size:.72rem;font-weight:700;color:#fb923c;text-transform:uppercase;letter-spacing:.15em;margin-bottom:12px;">For Hosts</p>
       <h2 style="font-size:2.25rem;font-weight:800;color:#fff;line-height:1.2;margin-bottom:18px;">Share Your Passion,<br/>Earn Doing It</h2>
       <p style="color:rgba(255,255,255,.7);font-size:.95rem;line-height:1.75;margin-bottom:32px;">Turn your skills and local knowledge into memorable experiences. Set your own schedule, price, and style.</p>
       <a href="{{ url_for('host') }}" class="btn-orange" style="font-size:.9rem;padding:14px 32px;">Start Hosting Today</a>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="host-cta-stats">
       {% for stat, label in [('Rs 5,000+','Avg. host earns/month'),('4.9★','Average rating'),('Free','To list your activity'),('24/7','Support available')] %}
       <div style="background:rgba(255,255,255,.07);border-radius:16px;padding:24px;border:1px solid rgba(255,255,255,.1);">
         <p style="font-size:1.2rem;font-weight:800;color:#f97316;">{{ stat }}</p>
@@ -206,6 +360,16 @@
 @media(max-width:1024px){.exp-grid{grid-template-columns:repeat(3,1fr)!important;}}
 @media(max-width:768px){.exp-grid{grid-template-columns:repeat(2,1fr)!important;}}
 @media(max-width:480px){.exp-grid{grid-template-columns:1fr!important;}}
+/* How it works: 3-col -> 1-col */
+.resp-how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;max-width:900px;margin:0 auto;}
+@media(max-width:768px){.resp-how-grid{grid-template-columns:1fr;max-width:480px;gap:20px;}}
+/* Host CTA: 2-col -> 1-col */
+.resp-host-cta-grid{display:grid;grid-template-columns:1fr 1fr;}
+@media(max-width:768px){.resp-host-cta-grid{grid-template-columns:1fr;gap:36px!important;text-align:center;}}
+/* Host CTA section padding */
+@media(max-width:768px){.host-cta-section{padding:56px 0!important;}}
+/* Host CTA inner stats grid: 2x2 -> 2x2 (fine) but on tiny screens stack */
+@media(max-width:360px){.host-cta-stats{grid-template-columns:1fr!important;}}
 </style>
 
 {% endblock %}

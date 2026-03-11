@@ -16,15 +16,47 @@
   </div>
 
   {% if bookings %}
-  <div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.06);">
-    <div style="display:grid;grid-template-columns:1fr 1fr 120px 120px;padding:16px 24px;background:#f9fafb;border-bottom:1px solid #f0f0f0;">
+  <style>
+  /* ── Desktop table ── */
+  .bookings-table-wrap { background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.06); }
+  .bookings-table-wrap .inner { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .booking-table-head { display:grid;grid-template-columns:1fr 1fr 110px 110px 110px;padding:16px 24px;background:#f9fafb;border-bottom:1px solid #f0f0f0; }
+  .booking-table-row { display:grid;grid-template-columns:1fr 1fr 110px 110px 110px;padding:18px 24px;border-bottom:1px solid #f9f9f9;align-items:center; }
+
+  /* ── Mobile: hide grid table, show cards ── */
+  @media(max-width:640px){
+    .bookings-table-wrap .inner { overflow-x:visible; }
+    .booking-table-head { display:none !important; }
+    .booking-table-row {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:18px 18px;
+      border-bottom:1px solid #f0f0f0;
+    }
+    .booking-table-row .col-email { font-size:.8rem; color:#777; }
+    .booking-table-row .col-action { display:block !important; }
+    .booking-table-row .col-action form,
+    .booking-table-row .col-action button { width:100%; justify-content:center; box-sizing:border-box; }
+    .booking-table-row .col-action button {
+      width:100%;
+      padding:10px;
+      font-size:.85rem;
+      border-radius:10px;
+    }
+  }
+  </style>
+  <div class="bookings-table-wrap">
+    <div class="inner">
+    <div class="booking-table-head" style="display:grid;grid-template-columns:1fr 1fr 120px 120px 120px;padding:16px 24px;background:#f9fafb;border-bottom:1px solid #f0f0f0;">
       <span style="font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;">Guest</span>
-      <span style="font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;">Email</span>
+      <span class="col-email" style="font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;">Email</span>
       <span style="font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;">Date</span>
       <span style="font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;">Payment</span>
+      <span class="col-action" style="font-size:.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;">Action</span>
     </div>
     {% for b in bookings %}
-    <div style="display:grid;grid-template-columns:1fr 1fr 120px 120px;padding:18px 24px;border-bottom:1px solid #f9f9f9;align-items:center;transition:background .2s;"
+    <div class="booking-table-row"
          onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='#fff'">
       <div style="display:flex;align-items:center;gap:10px;">
         <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem;flex-shrink:0;">
@@ -32,7 +64,7 @@
         </div>
         <span style="font-weight:600;font-size:.875rem;color:#111;">{{ b.username }}</span>
       </div>
-      <span style="font-size:.875rem;color:#777;">{{ b.email }}</span>
+      <span class="col-email" style="font-size:.875rem;color:#777;">{{ b.email }}</span>
       <span style="font-size:.85rem;color:#888;font-weight:500;">{{ b.booking_date }}</span>
       <span>
         {% if b.payment_status == 'paid' %}
@@ -43,8 +75,25 @@
         <span style="font-size:.72rem;font-weight:700;background:#fef2f2;color:#dc2626;padding:4px 10px;border-radius:999px;border:1px solid #fecaca;">&#10060; Failed</span>
         {% endif %}
       </span>
+      <span class="col-action">
+        {% if b.payment_status != 'paid' %}
+        <form method="POST" action="{{ url_for('unconfirm_booking', booking_id=b.id) }}"
+              onsubmit="return confirm('Remove this booking?');"
+              style="margin:0;">
+          <input type="hidden" name="activity_id" value="{{ activity_id }}">
+          <button type="submit"
+                  style="font-size:.72rem;padding:4px 12px;border-radius:8px;border:1.5px solid #fecaca;background:#fff;color:#dc2626;font-weight:700;cursor:pointer;transition:background .2s;"
+                  onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fff'">
+            Unconfirm
+          </button>
+        </form>
+        {% else %}
+        <span style="font-size:.72rem;color:#bbb;">—</span>
+        {% endif %}
+      </span>
     </div>
     {% endfor %}
+    </div>
   </div>
   {% else %}
   <div style="background:#fff;border-radius:18px;padding:72px 28px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,.06);">

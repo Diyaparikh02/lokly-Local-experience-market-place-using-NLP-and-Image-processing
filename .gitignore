@@ -27,3 +27,15 @@ exportToHTML/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs & temp files
+*.log
+out.txt
+error_log.txt
+check_error.py
+
+# Model cache (large files - download on first run)
+.cache/
+
+# Flask session files
+flask_session/

@@ -14,7 +14,7 @@
   </div>
 
   <!-- Stats row -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px;">
+  <div class="resp-stats-grid">
     {% set paid_count = bookings | selectattr('payment_status','equalto','paid') | list | length %}
     {% set pending_count = bookings | selectattr('payment_status','equalto','pending') | list | length %}
     {% set failed_count = bookings | selectattr('payment_status','equalto','failed') | list | length %}
@@ -62,7 +62,7 @@
 
     {% if bookings %}
       {% for b in bookings %}
-      <div style="padding:20px 28px;border-bottom:1px solid #f9f9f9;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .2s;"
+      <div class="resp-booking-row" style="padding:20px 28px;border-bottom:1px solid #f9f9f9;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .2s;"
            onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='#fff'">
         <div style="display:flex;align-items:center;gap:14px;">
           <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#fed7aa,#fdba74);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🎯</div>
@@ -71,7 +71,7 @@
             <p style="font-size:.8rem;color:#888;margin-top:2px;">{{ b.location }}</p>
           </div>
         </div>
-        <div style="text-align:right;flex-shrink:0;">
+        <div class="resp-booking-right" style="text-align:right;flex-shrink:0;">
           <p style="font-weight:800;color:#f97316;">&#8377;{{ b.price }}</p>
           <p style="font-size:.78rem;color:#aaa;margin-top:3px;">{{ b.booking_date }}</p>
           {% if b.payment_status == 'paid' %}
@@ -86,6 +86,17 @@
           <span style="display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-size:.68rem;font-weight:700;background:#fef2f2;color:#dc2626;padding:3px 9px;border-radius:999px;border:1px solid #fecaca;">
             <i class="fa-solid fa-circle-xmark"></i> Failed
           </span>
+          {% endif %}
+          {% if b.payment_status != 'paid' %}
+          <form method="POST" action="{{ url_for('cancel_booking', booking_id=b.id) }}"
+                onsubmit="return confirm('Cancel this booking?');"
+                style="margin:0;margin-top:6px;">
+            <button type="submit"
+                    style="font-size:.68rem;padding:3px 10px;border-radius:8px;border:1.5px solid #fecaca;background:#fff;color:#dc2626;font-weight:700;cursor:pointer;transition:background .2s;"
+                    onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fff'">
+              Cancel Booking
+            </button>
+          </form>
           {% endif %}
         </div>
       </div>

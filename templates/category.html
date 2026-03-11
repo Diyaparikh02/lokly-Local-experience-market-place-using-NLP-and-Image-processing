@@ -15,7 +15,12 @@
   </div>
 
   {% if experiences %}
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px;">
+  <style>
+    .cat-exp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+    @media(max-width:768px){.cat-exp-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:480px){.cat-exp-grid{grid-template-columns:1fr;}}
+  </style>
+  <div class="cat-exp-grid">
     {% for exp in experiences %}
     <a href="{{ url_for('experience_detail', id=exp.id) }}" class="card">
       <div style="height:200px;overflow:hidden;">
