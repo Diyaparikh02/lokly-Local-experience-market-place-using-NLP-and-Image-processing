@@ -1856,15 +1856,21 @@ def become_host():
             image.save(image_path)
 
     # ---------- INSERT INTO DATABASE ----------
-    cursor = db.cursor()
+    ensure_connection()
+
+    # Get host email from users table
+    cursor.execute("SELECT email FROM users WHERE id=%s", (host_user_id,))
+    user_row = cursor.fetchone()
+    host_email = user_row["email"] if user_row else ""
 
     cursor.execute("""
         INSERT INTO host_activity
-        (host_user_id, name, title, description, location, price, image_filename, category, session_link)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (host_user_id, name, email, title, description, location, price, image_filename, category, session_link)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         host_user_id,
         name,
+        host_email,
         title,
         description,
         location,
@@ -1875,7 +1881,6 @@ def become_host():
     ))
 
     db.commit()
-    cursor.close()
 
     session["is_host"] = True
 
