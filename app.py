@@ -2588,6 +2588,23 @@ def image_search():
     return jsonify({"results": results})
 
 
+# ---- TEMP one-time fix route (remove after use) ----
+@app.route("/admin-fix-payment-lokly2026")
+def admin_fix_payment():
+    pi = "pi_3T9mr3HApAf9Xofx17SvvV5P"
+    try:
+        ensure_connection()
+        cursor.execute(
+            "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
+            (pi, pi)
+        )
+        cursor.execute("UPDATE user_bookings SET payment_status='paid' WHERE id=2")
+        db.commit()
+        return f"OK — payment {pi} marked as paid, booking 2 marked paid."
+    except Exception as e:
+        return f"Error: {e}", 500
+
+
 if __name__ == "__main__":
     print("   Lokly is running!")
     print("   Open this URL in your browser:")
