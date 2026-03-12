@@ -192,12 +192,28 @@ def get_conn():
 
 # -------- Auto-reconnect helper (used by legacy routes) --------
 def ensure_connection():
-    """Give legacy routes a refreshed global db + cursor via the pool."""
+    """Give legacy routes a working global db + cursor.
+    Reuses the existing connection if it's still alive — only reconnects when dead.
+    This avoids a costly SSL handshake to the cloud DB on every request."""
     global db, cursor
-    try:
-        if db is not None:
+    # Fast path: ping the existing connection — no network overhead if alive
+    if db is not None:
+        try:
+            db.ping(reconnect=False)
+            # Still alive — just refresh the cursor
+            if cursor:
+                try: cursor.close()
+                except: pass
+            cursor = db.cursor(dictionary=True)
+            return
+        except Exception:
+            # Connection is dead — fall through to reconnect
             try: db.close()
             except: pass
+            db = None
+            cursor = None
+    # Slow path: get a fresh connection from pool (only when needed)
+    try:
         db = get_conn()
         cursor = db.cursor(dictionary=True)
     except Exception as e:
@@ -321,24 +337,6 @@ def ensure_tables():
             """)
         except Exception:
             pass  # column already exists
-
-        # Fix ENUM → VARCHAR for payment_status (in case live DB has old ENUM definition)
-        try:
-            cursor.execute("""
-                ALTER TABLE user_bookings
-                MODIFY COLUMN payment_status VARCHAR(20) DEFAULT 'pending'
-            """)
-        except Exception:
-            pass
-
-        # Fix ENUM → VARCHAR for payments.status (in case live DB has old ENUM definition)
-        try:
-            cursor.execute("""
-                ALTER TABLE payments
-                MODIFY COLUMN status VARCHAR(20) DEFAULT 'pending'
-            """)
-        except Exception:
-            pass
 
         # 7️⃣ Add popularity tracking columns to host_activity
         try:
