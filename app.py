@@ -64,26 +64,32 @@ BREVO_FROM_NAME  = "Lokly"
 
 def _send_brevo(to_email, to_name, subject, html_body):
     """Send one email via Brevo SMTP. Runs in a background thread."""
+    print(f"[MAIL] _send_brevo called: to={to_email} subject={subject}", flush=True)
     if not BREVO_SMTP_LOGIN or not BREVO_SMTP_KEY:
-        _mail_sys.stderr.write("[MAIL] ERROR: BREVO_SMTP_LOGIN or BREVO_SMTP_KEY not set in .env\n")
+        print("[MAIL] ERROR: BREVO_SMTP_LOGIN or BREVO_SMTP_KEY is empty — cannot send email", flush=True)
+        _mail_sys.stderr.write("[MAIL] ERROR: BREVO_SMTP_LOGIN or BREVO_SMTP_KEY not set in env\n")
         _mail_sys.stderr.flush()
         return
     try:
+        print(f"[MAIL] Connecting to smtp-relay.brevo.com:587 as {BREVO_SMTP_LOGIN[:6]}...", flush=True)
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"]    = f"{BREVO_FROM_NAME} <{BREVO_FROM_EMAIL}>"
         msg["To"]      = to_email
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        with smtplib.SMTP("smtp-relay.brevo.com", 587, timeout=15) as server:
+        with smtplib.SMTP("smtp-relay.brevo.com", 587, timeout=30) as server:
             server.ehlo()
             server.starttls()
+            server.ehlo()
             server.login(BREVO_SMTP_LOGIN, BREVO_SMTP_KEY)
             server.sendmail(BREVO_FROM_EMAIL, [to_email], msg.as_string())
 
+        print(f"[MAIL] SUCCESS: sent to {to_email} | subject: {subject}", flush=True)
         _mail_sys.stderr.write(f"[MAIL] Sent to {to_email} | subject: {subject}\n")
         _mail_sys.stderr.flush()
     except Exception as ex:
+        print(f"[MAIL] FAILED sending to {to_email}: {ex}", flush=True)
         _mail_sys.stderr.write(f"[MAIL] Exception sending to {to_email}: {ex}\n")
         _mail_sys.stderr.flush()
 
@@ -2256,6 +2262,7 @@ def confirm_payment():
     if intent["status"] == "succeeded":
         # ---- Send confirmation emails (non-blocking) ----
         try:
+            print(f"[MAIL] Preparing email data for booking_id={booking_id}", flush=True)
             mail_db = get_conn()
             ecur = mail_db.cursor(dictionary=True)
             ecur.execute("""
@@ -2277,14 +2284,14 @@ def confirm_payment():
             ecur.close()
             mail_db.close()
 
-            if info:
+            if not info:
+                print(f"[MAIL] WARNING: No booking data found for booking_id={booking_id} — emails not sent", flush=True)
+            else:
                 amount_inr = float(info["price"] or 0)
-                import sys as _sys
-                _sys.stderr.write(f"[MAIL] Sending user email to: {info['user_email']}\n")
-                _sys.stderr.write(f"[MAIL] Sending host email to: {info['host_email']}\n")
-                _sys.stderr.flush()
+                print(f"[MAIL] Queued emails → user: {info['user_email']} | host: {info['host_email']}", flush=True)
 
                 def _send_both(inf, amt, txn_id):
+                    print(f"[MAIL] Thread starting — sending to user {inf['user_email']} and host {inf['host_email']}", flush=True)
                     # Send user email first
                     _send_brevo(
                         to_email  = inf["user_email"],
@@ -2323,7 +2330,7 @@ def confirm_payment():
                 )
                 t.start()
         except Exception as mail_err:
-            print(f"[MAIL] Error preparing email data: {mail_err}")
+            print(f"[MAIL] Error preparing email data: {mail_err}", flush=True)
         # -------------------------------------------------
 
         flash("Payment successful! Your booking is confirmed.", "success")
@@ -2724,6 +2731,104 @@ def admin_fix_payment(pi_id=None):
 
     if not results:
         return "No pending payments found to fix.", 200
+    return "<br>".join(results), 200
+
+
+# ---------- Test Email Route (debug) ----------
+@app.route("/test-email-lokly2026")
+@app.route("/test-email-lokly2026/<to_email>")
+def test_email_route(to_email=None):
+    """Debug: verify Brevo SMTP is working. Visit /test-email-lokly2026/your@email.com"""
+    if not to_email:
+        return (
+            f"<h3>Brevo Email Debug</h3>"
+            f"<b>BREVO_SMTP_LOGIN:</b> {'SET (' + BREVO_SMTP_LOGIN[:6] + '...)' if BREVO_SMTP_LOGIN else 'NOT SET'}<br>"
+            f"<b>BREVO_SMTP_KEY:</b> {'SET' if BREVO_SMTP_KEY else 'NOT SET'}<br>"
+            f"<b>BREVO_FROM_EMAIL:</b> {BREVO_FROM_EMAIL or 'NOT SET'}<br><br>"
+            f"Visit <code>/test-email-lokly2026/your@email.com</code> to send a test email."
+        ), 200
+    print(f"[TEST-EMAIL] Sending test email to {to_email}", flush=True)
+    try:
+        _send_brevo(
+            to_email  = to_email,
+            to_name   = "Test",
+            subject   = "Lokly Email Test",
+            html_body = "<h2>Lokly email is working!</h2><p>If you received this, Brevo SMTP is configured correctly.</p>",
+        )
+        return f"<h3>Test email sent to {to_email}</h3><p>Check Render logs for [MAIL] output.</p>", 200
+    except Exception as e:
+        return f"<h3>Error: {e}</h3>", 500
+
+
+# ---------- Resend Booking Email Route (admin) ----------
+@app.route("/resend-booking-email-lokly2026/<int:booking_id>")
+def resend_booking_email(booking_id):
+    """Manually resend booking confirmation emails for a specific booking_id."""
+    try:
+            rdb = get_conn()
+            rcur = rdb.cursor(dictionary=True)
+            rcur.execute("""
+                SELECT
+                    u.username  AS user_name,
+                    u.email     AS user_email,
+                    h.title     AS activity_title,
+                    h.price     AS price,
+                    hu.username AS host_name,
+                    hu.email    AS host_email,
+                    b.booking_date,
+                    p.payment_gateway_order_id AS txn_id
+                FROM user_bookings b
+                JOIN users u         ON b.user_id      = u.id
+                JOIN host_activity h ON b.activity_id  = h.id
+                JOIN users hu        ON h.host_user_id = hu.id
+                LEFT JOIN payments p ON p.booking_id   = b.id
+                WHERE b.id = %s
+            """, (booking_id,))
+            info = rcur.fetchone()
+            rcur.close()
+            rdb.close()
+    except Exception as e:
+        return f"DB error: {e}", 500
+
+    if not info:
+        return f"No booking found for id={booking_id}", 404
+
+    amt = float(info["price"] or 0)
+    txn = info["txn_id"] or f"booking-{booking_id}"
+    results = []
+
+    # User email
+    try:
+        _send_brevo(
+            to_email  = info["user_email"],
+            to_name   = info["user_name"],
+            subject   = f"Booking Confirmed: {info['activity_title']}",
+            html_body = build_user_email(
+                username=info["user_name"], activity_title=info["activity_title"],
+                booking_date=str(info["booking_date"]), amount_inr=amt,
+                transaction_id=txn, host_name=info["host_name"], host_email=info["host_email"],
+            ),
+        )
+        results.append(f"User email sent to {info['user_email']}")
+    except Exception as e:
+        results.append(f"User email FAILED: {e}")
+
+    # Host email
+    try:
+        _send_brevo(
+            to_email  = info["host_email"],
+            to_name   = info["host_name"],
+            subject   = f"New Paid Booking: {info['activity_title']}",
+            html_body = build_host_email(
+                host_name=info["host_name"], username=info["user_name"],
+                user_email=info["user_email"], activity_title=info["activity_title"],
+                booking_date=str(info["booking_date"]), amount_inr=amt, transaction_id=txn,
+            ),
+        )
+        results.append(f"Host email sent to {info['host_email']}")
+    except Exception as e:
+        results.append(f"Host email FAILED: {e}")
+
     return "<br>".join(results), 200
 
 
