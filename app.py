@@ -2595,19 +2595,37 @@ def ping():
     return "pong", 200
 
 
-# ---- TEMP one-time fix route (remove after use) ----
+# ---- TEMP admin fix route for stuck payments (remove when no longer needed) ----
 @app.route("/admin-fix-payment-lokly2026")
-def admin_fix_payment():
-    pi = "pi_3T9mr3HApAf9Xofx17SvvV5P"
+@app.route("/admin-fix-payment-lokly2026/<pi_id>")
+def admin_fix_payment(pi_id=None):
+    # Fix known stuck payments if no pi_id provided
+    if pi_id is None:
+        pi_id = "pi_3TA2e9HApAf9Xofx0mB3o95i"
     try:
         ensure_connection()
-        cursor.execute(
-            "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
-            (pi, pi)
+        fix_cur = db.cursor(dictionary=True)
+        # Look up booking_id from payments table
+        fix_cur.execute(
+            "SELECT id, booking_id FROM payments WHERE payment_gateway_order_id=%s OR payment_gateway_payment_id=%s",
+            (pi_id, pi_id)
         )
-        cursor.execute("UPDATE user_bookings SET payment_status='paid' WHERE id=2")
+        row = fix_cur.fetchone()
+        if not row:
+            fix_cur.close()
+            return f"No payment record found for {pi_id}", 404
+        booking_id = row["booking_id"]
+        fix_cur.execute(
+            "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
+            (pi_id, pi_id)
+        )
+        fix_cur.execute(
+            "UPDATE user_bookings SET payment_status='paid' WHERE id=%s",
+            (booking_id,)
+        )
         db.commit()
-        return f"OK — payment {pi} marked as paid, booking 2 marked paid."
+        fix_cur.close()
+        return f"OK — payment {pi_id} marked as paid, booking {booking_id} marked paid."
     except Exception as e:
         return f"Error: {e}", 500
 
