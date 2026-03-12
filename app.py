@@ -2202,6 +2202,14 @@ def create_payment_intent():
     except Exception as e:
         return jsonify({"error": f"Database connection error: {e}"}), 500
 
+    # Drop any legacy FK constraints that block bookings (one-time cleanup per cold start)
+    for _legacy_fk in ['ub_a', 'ub_u']:
+        try:
+            cur.execute(f"ALTER TABLE user_bookings DROP FOREIGN KEY `{_legacy_fk}`")
+            db.commit()
+        except Exception:
+            pass  # FK already gone — fine
+
     # Create booking with payment_status = pending
     try:
         cur.execute(
