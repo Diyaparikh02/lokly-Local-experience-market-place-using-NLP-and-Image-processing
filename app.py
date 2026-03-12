@@ -276,7 +276,7 @@ def ensure_tables():
                 booking_id INT NOT NULL,
                 amount DECIMAL(10,2) NOT NULL,
                 currency VARCHAR(10) DEFAULT 'INR',
-                status ENUM('pending','success','failed') DEFAULT 'pending',
+                status VARCHAR(20) DEFAULT 'pending',
                 payment_gateway_order_id VARCHAR(255),
                 payment_gateway_payment_id VARCHAR(255),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -311,10 +311,28 @@ def ensure_tables():
         try:
             cursor.execute("""
                 ALTER TABLE user_bookings
-                ADD COLUMN payment_status ENUM('pending','paid','failed') DEFAULT 'pending'
+                ADD COLUMN payment_status VARCHAR(20) DEFAULT 'pending'
             """)
         except Exception:
             pass  # column already exists
+
+        # Fix ENUM → VARCHAR for payment_status (in case live DB has old ENUM definition)
+        try:
+            cursor.execute("""
+                ALTER TABLE user_bookings
+                MODIFY COLUMN payment_status VARCHAR(20) DEFAULT 'pending'
+            """)
+        except Exception:
+            pass
+
+        # Fix ENUM → VARCHAR for payments.status (in case live DB has old ENUM definition)
+        try:
+            cursor.execute("""
+                ALTER TABLE payments
+                MODIFY COLUMN status VARCHAR(20) DEFAULT 'pending'
+            """)
+        except Exception:
+            pass
 
         # 7️⃣ Add popularity tracking columns to host_activity
         try:
