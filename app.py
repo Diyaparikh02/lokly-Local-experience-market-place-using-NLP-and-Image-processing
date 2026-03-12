@@ -172,19 +172,27 @@ _db_kwargs = dict(
 if os.getenv("DB_HOST", "localhost") != "localhost":
     _db_kwargs["ssl_disabled"] = False
 
-# Create a connection pool — each request gets its own connection, no stale-connection bugs
-# pool_size=2: 2 SSL handshakes at startup instead of 5 — much faster local startup
+# Create a connection pool in a background thread so Flask starts instantly
+# (avoids 1-2s SSL handshake to Aiven cloud DB before app.run())
 _connection_pool = None
-try:
-    _connection_pool = _mysql_pooling.MySQLConnectionPool(
-        pool_name="lokly_pool",
-        pool_size=2,
-        pool_reset_session=True,
-        **_db_kwargs
-    )
-    print("[OK] MySQL connection pool created (size=2).")
-except Exception as _pool_err:
-    print(f"[ERROR] Could not create connection pool: {_pool_err}")
+_pool_ready = False
+
+def _init_pool():
+    global _connection_pool, _pool_ready
+    try:
+        _connection_pool = _mysql_pooling.MySQLConnectionPool(
+            pool_name="lokly_pool",
+            pool_size=1,
+            pool_reset_session=True,
+            **_db_kwargs
+        )
+        _pool_ready = True
+        print("[OK] MySQL connection pool ready (size=1).")
+    except Exception as _e:
+        print(f"[ERROR] Could not create connection pool: {_e}")
+
+_pool_thread = threading.Thread(target=_init_pool, daemon=True)
+_pool_thread.start()
 
 # -------- Simple TTL cache (avoids hitting cloud DB on every page load) --------
 import time as _time
