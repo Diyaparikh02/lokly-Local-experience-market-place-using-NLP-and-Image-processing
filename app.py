@@ -2202,12 +2202,6 @@ def create_payment_intent():
     except Exception as e:
         return jsonify({"error": f"Database connection error: {e}"}), 500
 
-    # Bypass any legacy FK constraints on user_bookings (session-scoped, instant, no table lock)
-    try:
-        cur.execute("SET FOREIGN_KEY_CHECKS = 0")
-    except Exception:
-        pass
-
     # Create booking with payment_status = pending
     try:
         cur.execute(
@@ -2219,11 +2213,6 @@ def create_payment_intent():
     except Exception as e:
         cur.close()
         return jsonify({"error": f"DB error creating booking: {e}"}), 500
-    finally:
-        try:
-            cur.execute("SET FOREIGN_KEY_CHECKS = 1")
-        except Exception:
-            pass
 
     # Create Stripe PaymentIntent
     try:
