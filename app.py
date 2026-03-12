@@ -167,17 +167,35 @@ if os.getenv("DB_HOST", "localhost") != "localhost":
     _db_kwargs["ssl_disabled"] = False
 
 # Create a connection pool — each request gets its own connection, no stale-connection bugs
+# pool_size=2: 2 SSL handshakes at startup instead of 5 — much faster local startup
 _connection_pool = None
 try:
     _connection_pool = _mysql_pooling.MySQLConnectionPool(
         pool_name="lokly_pool",
-        pool_size=5,
+        pool_size=2,
         pool_reset_session=True,
         **_db_kwargs
     )
-    print("[OK] MySQL connection pool created (size=5).")
+    print("[OK] MySQL connection pool created (size=2).")
 except Exception as _pool_err:
     print(f"[ERROR] Could not create connection pool: {_pool_err}")
+
+# -------- Simple TTL cache (avoids hitting cloud DB on every page load) --------
+import time as _time
+
+_cache_store = {}   # key -> (value, expires_at)
+
+def _cache_get(key):
+    entry = _cache_store.get(key)
+    if entry and _time.time() < entry[1]:
+        return entry[0]
+    return None
+
+def _cache_set(key, value, ttl=60):
+    _cache_store[key] = (value, _time.time() + ttl)
+
+def _cache_clear(key):
+    _cache_store.pop(key, None)
 
 # Global db/cursor kept for legacy routes — refreshed via ensure_connection()
 db = None
@@ -466,7 +484,10 @@ DEFAULT_CATEGORIES = [
 ]
 
 def get_categories_from_db():
-    """Read categories from the DB categories table."""
+    """Read categories from the DB categories table. Cached for 120s."""
+    cached = _cache_get("categories")
+    if cached is not None:
+        return cached
     try:
         ensure_connection()
         c = db.cursor(dictionary=True)
@@ -474,11 +495,13 @@ def get_categories_from_db():
         rows = c.fetchall()
         if not rows:
             return DEFAULT_CATEGORIES
-        return [
+        result = [
             {"slug": r["slug"], "name": r["name"],
              "image": CATEGORY_IMAGES.get(r["slug"], "/static/images/home.png")}
             for r in rows
         ]
+        _cache_set("categories", result, ttl=120)
+        return result
     except Exception:
         return DEFAULT_CATEGORIES
 
@@ -1493,7 +1516,10 @@ def _get_clip_static_embs():
 
 
 def get_hosted_activities():
-    """Fetch all user-hosted activities from DB and normalise into dicts."""
+    """Fetch all user-hosted activities from DB and normalise into dicts. Cached for 30s."""
+    cached = _cache_get("hosted_activities")
+    if cached is not None:
+        return cached
     try:
         c = db.cursor(dictionary=True)
         c.execute("SELECT * FROM host_activity ORDER BY id DESC")
@@ -1512,6 +1538,7 @@ def get_hosted_activities():
             "total_bookings": int(r.get("total_bookings") or 0),
             "total_clicks":   int(r.get("total_clicks")   or 0),
             })
+        _cache_set("hosted_activities", result, ttl=30)
         return result
     except Exception:
         return []
@@ -1934,6 +1961,7 @@ def become_host():
         ))
 
         db.commit()
+        _cache_clear("hosted_activities")  # invalidate so new activity shows immediately
     except Exception as e:
         print(f"[ERROR] become_host DB insert failed: {e}")
         flash(f"Error saving activity: {e}", "danger")
@@ -2025,6 +2053,7 @@ def host_manage(db_id):
             (session_link, db_id)
         )
         db.commit()
+        _cache_clear("hosted_activities")
         flash("✅ Session link updated.", "success")
         return redirect(url_for("host_manage", db_id=db_id))
     cursor.execute("SELECT * FROM enrollments WHERE activity_id=%s ORDER BY created_at DESC", (db_id,))
@@ -2491,6 +2520,7 @@ def delete_activity(activity_id):
     cur.execute("DELETE FROM host_activity WHERE id=%s AND host_user_id=%s",
                 (activity_id, host_user_id))
     db.commit()
+    _cache_clear("hosted_activities")
     cur.close()
     flash("Activity deleted successfully.", "success")
     return redirect(url_for("host_dashboard"))
@@ -2576,6 +2606,9 @@ def image_search():
     """
     if "user_id" not in session:
         return jsonify({"error": "Please log in first."}), 401
+
+    if SKIP_ML_MODELS:
+        return jsonify({"error": "Image search is disabled in local dev mode (SKIP_ML_MODELS=true). It works on the deployed site."}), 503
 
     file = request.files.get("image")
     if not file or not file.filename:
