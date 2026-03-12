@@ -38,6 +38,12 @@ STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 stripe.api_key = STRIPE_SECRET_KEY
 
+# -------- Feature Flags --------
+# Set SKIP_ML_MODELS=true in your local .env to skip loading NLP/CLIP models
+SKIP_ML_MODELS = os.getenv("SKIP_ML_MODELS", "false").strip().lower() == "true"
+if SKIP_ML_MODELS:
+    print("[INFO] SKIP_ML_MODELS=true -- NLP/CLIP models disabled for fast local dev.")
+
 # -------- Cloudinary Setup (for persistent image uploads on Render) --------
 _CLOUDINARY_CONFIGURED = False
 if cloudinary and os.getenv("CLOUDINARY_CLOUD_NAME"):
@@ -375,8 +381,10 @@ def ensure_tables():
 
         db.commit()
 
-if cursor:
-    ensure_tables()
+# Run ensure_tables in background so Flask starts immediately
+# (avoids blocking on 10+ cloud DB queries before app.run())
+_t = threading.Thread(target=ensure_tables, daemon=True)
+_t.start()
 
 # -------- File Upload Setup --------
 UPLOAD_FOLDER = os.path.join("static", "uploads")
@@ -535,6 +543,8 @@ _nlp_model = None
 
 def _get_nlp_model():
     global _nlp_model
+    if SKIP_ML_MODELS:
+        raise RuntimeError("ML models disabled (SKIP_ML_MODELS=true)")
     if _nlp_model is None:
         print("Loading NLP model (all-MiniLM-L6-v2)...")
         from sentence_transformers import SentenceTransformer
