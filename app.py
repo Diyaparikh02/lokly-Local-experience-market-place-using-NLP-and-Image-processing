@@ -296,7 +296,7 @@ def ensure_tables():
             )
         """)
 
-        # 3️⃣ USER BOOKINGS
+        # 3️⃣ USER BOOKINGS (no FK constraints — avoids errors when activities/users are deleted)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_bookings (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -304,10 +304,17 @@ def ensure_tables():
                 activity_id INT NOT NULL,
                 booking_date DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (activity_id) REFERENCES host_activity(id) ON DELETE CASCADE
+                payment_status VARCHAR(20) DEFAULT 'pending'
             )
         """)
+        # Drop legacy FK constraints if they still exist (they cause payment booking failures)
+        for _fk in ['ub_a', 'ub_u']:
+            try:
+                cursor.execute(f'ALTER TABLE user_bookings DROP FOREIGN KEY {_fk}')
+                db.commit()
+                print(f'[OK] Dropped legacy FK {_fk} from user_bookings')
+            except Exception:
+                pass  # Already dropped or never existed — that's fine
 
         # 4️⃣ ENROLLMENTS (optional)
         cursor.execute("""
