@@ -147,47 +147,65 @@ def build_host_email(host_name, username, user_email, activity_title, booking_da
     </body></html>
     """
 
-# -------- MySQL Connection --------
-try:
-    _db_kwargs = dict(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", 3306)),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
-        database=os.getenv("DB_NAME", "mywebsite"),
-    )
-    if os.getenv("DB_HOST", "localhost") != "localhost":
-        _db_kwargs["ssl_disabled"] = False
-    db = mysql.connector.connect(**_db_kwargs)
-    cursor = db.cursor(dictionary=True)
-    print("[OK] MySQL Database connected successfully!")
-except Error as e:
-    print(f"[ERROR] Error connecting to MySQL: {e}")
-    db = None
-    cursor = None
+# -------- MySQL Connection (pool-based for reliability) --------
+from mysql.connector import pooling as _mysql_pooling
 
-# -------- Auto-reconnect helper --------
+_db_kwargs = dict(
+    host=os.getenv("DB_HOST", "localhost"),
+    port=int(os.getenv("DB_PORT", 3306)),
+    user=os.getenv("DB_USER", "root"),
+    password=os.getenv("DB_PASSWORD", ""),
+    database=os.getenv("DB_NAME", "mywebsite"),
+)
+if os.getenv("DB_HOST", "localhost") != "localhost":
+    _db_kwargs["ssl_disabled"] = False
+
+# Create a connection pool — each request gets its own connection, no stale-connection bugs
+_connection_pool = None
+try:
+    _connection_pool = _mysql_pooling.MySQLConnectionPool(
+        pool_name="lokly_pool",
+        pool_size=5,
+        pool_reset_session=True,
+        **_db_kwargs
+    )
+    print("[OK] MySQL connection pool created (size=5).")
+except Exception as _pool_err:
+    print(f"[ERROR] Could not create connection pool: {_pool_err}")
+
+# Global db/cursor kept for legacy routes — refreshed via ensure_connection()
+db = None
+cursor = None
+
+def get_conn():
+    """Get a fresh connection from the pool (or direct connect as fallback).
+    Caller MUST call conn.close() or use it in a with-statement."""
+    if _connection_pool:
+        return _connection_pool.get_connection()
+    return mysql.connector.connect(**_db_kwargs)
+
+# -------- Auto-reconnect helper (used by legacy routes) --------
 def ensure_connection():
-    """Ping the DB and reconnect (with a fresh cursor) if the connection dropped."""
+    """Give legacy routes a refreshed global db + cursor via the pool."""
     global db, cursor
-    if db is None:
-        try:
-            db = mysql.connector.connect(**_db_kwargs)
-            cursor = db.cursor(dictionary=True)
-            print("[OK] MySQL connected (was None).")
-        except Exception as e:
-            print(f"[ERROR] MySQL connect failed: {e}")
-        return
     try:
-        db.ping(reconnect=True, attempts=3, delay=2)
+        if db is not None:
+            try: db.close()
+            except: pass
+        db = get_conn()
         cursor = db.cursor(dictionary=True)
-    except Exception:
-        try:
-            db = mysql.connector.connect(**_db_kwargs)
-            cursor = db.cursor(dictionary=True)
-            print("[OK] MySQL reconnected successfully.")
-        except Exception as e:
-            print(f"[ERROR] MySQL reconnect failed: {e}")
+    except Exception as e:
+        print(f"[ERROR] ensure_connection failed: {e}")
+        db = None
+        cursor = None
+
+# Bootstrap the initial global connection
+try:
+    ensure_connection()
+    if db:
+        print("[OK] MySQL Database connected successfully!")
+except Exception as _e:
+    print(f"[ERROR] Initial DB setup failed: {_e}")
 
 # -------- Ensure tables exist (idempotent) --------
 def ensure_tables():
@@ -2172,16 +2190,13 @@ def confirm_payment():
     except stripe.error.StripeError as e:
         return jsonify({"success": False, "error": str(e.user_message)}), 400
 
-    # Use a fresh independent connection for confirm_payment to avoid shared-state issues
+    # Use a fresh pooled connection — completely isolated, never stale
     pay_db = None
+    pay_cur = None
+    db_success = False
     try:
-        pay_db = mysql.connector.connect(**_db_kwargs)
+        pay_db = get_conn()
         pay_cur = pay_db.cursor()
-    except Exception as e:
-        print(f"[ERROR] confirm_payment DB connect failed: {e}")
-        return jsonify({"success": False, "error": f"Database connection error ({e}). Your payment ID: {payment_intent_id}"}), 500
-
-    try:
         if intent["status"] == "succeeded":
             pay_cur.execute(
                 "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
@@ -2192,8 +2207,7 @@ def confirm_payment():
                 (booking_id,)
             )
             pay_db.commit()
-            pay_cur.close()
-            pay_db.close()
+            db_success = True
         else:
             pay_cur.execute(
                 "UPDATE payments SET status='failed' WHERE payment_gateway_order_id=%s",
@@ -2204,21 +2218,28 @@ def confirm_payment():
                 (booking_id,)
             )
             pay_db.commit()
-            pay_cur.close()
-            pay_db.close()
-            return jsonify({"success": False, "error": "Payment not completed. Please try again."}), 400
     except Exception as e:
         print(f"[ERROR] confirm_payment DB update failed: {e}")
         if pay_db:
-            try: pay_db.close()
+            try: pay_db.rollback()
             except: pass
         return jsonify({"success": False, "error": f"DB error: {e}. Your payment ID is {payment_intent_id}"}), 500
+    finally:
+        if pay_cur:
+            try: pay_cur.close()
+            except: pass
+        if pay_db:
+            try: pay_db.close()
+            except: pass
+
+    if intent["status"] != "succeeded":
+        return jsonify({"success": False, "error": "Payment not completed. Please try again."}), 400
 
     if intent["status"] == "succeeded":
         # ---- Send confirmation emails (non-blocking) ----
         try:
-            ensure_connection()
-            ecur = db.cursor(dictionary=True)
+            mail_db = get_conn()
+            ecur = mail_db.cursor(dictionary=True)
             ecur.execute("""
                 SELECT
                     u.username  AS user_name,
@@ -2236,6 +2257,7 @@ def confirm_payment():
             """, (booking_id,))
             info = ecur.fetchone()
             ecur.close()
+            mail_db.close()
 
             if info:
                 amount_inr = float(info["price"] or 0)
@@ -2616,39 +2638,75 @@ def ping():
     return "pong", 200
 
 
-# ---- TEMP admin fix route for stuck payments (remove when no longer needed) ----
+# ---- Admin: fix any stuck payments (pending in DB but succeeded in Stripe) ----
 @app.route("/admin-fix-payment-lokly2026")
 @app.route("/admin-fix-payment-lokly2026/<pi_id>")
 def admin_fix_payment(pi_id=None):
-    # Fix known stuck payments if no pi_id provided
-    if pi_id is None:
-        pi_id = "pi_3TA2e9HApAf9Xofx0mB3o95i"
+    """
+    If pi_id given  → fix that one payment.
+    If no pi_id     → scan ALL pending payments and auto-fix any that succeeded in Stripe.
+    """
+    results = []
     try:
-        ensure_connection()
-        fix_cur = db.cursor(dictionary=True)
-        # Look up booking_id from payments table
-        fix_cur.execute(
-            "SELECT id, booking_id FROM payments WHERE payment_gateway_order_id=%s OR payment_gateway_payment_id=%s",
-            (pi_id, pi_id)
-        )
-        row = fix_cur.fetchone()
-        if not row:
-            fix_cur.close()
-            return f"No payment record found for {pi_id}", 404
-        booking_id = row["booking_id"]
-        fix_cur.execute(
-            "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
-            (pi_id, pi_id)
-        )
-        fix_cur.execute(
-            "UPDATE user_bookings SET payment_status='paid' WHERE id=%s",
-            (booking_id,)
-        )
-        db.commit()
+        fix_db = get_conn()
+        fix_cur = fix_db.cursor(dictionary=True)
+
+        if pi_id:
+            # Fix a specific payment
+            pis_to_check = [pi_id]
+        else:
+            # Find all pending payments and check them against Stripe
+            fix_cur.execute(
+                "SELECT payment_gateway_order_id FROM payments WHERE status='pending' ORDER BY id DESC LIMIT 50"
+            )
+            rows = fix_cur.fetchall()
+            pis_to_check = [r["payment_gateway_order_id"] for r in rows if r["payment_gateway_order_id"]]
+
+        for pi in pis_to_check:
+            if not pi:
+                continue
+            # Check Stripe status
+            try:
+                intent = stripe.PaymentIntent.retrieve(pi)
+                stripe_status = intent["status"]
+            except Exception as se:
+                results.append(f"SKIP {pi} — Stripe error: {se}")
+                continue
+
+            if stripe_status != "succeeded":
+                results.append(f"SKIP {pi} — Stripe status: {stripe_status}")
+                continue
+
+            # Stripe says succeeded — look up booking and fix DB
+            fix_cur.execute(
+                "SELECT id, booking_id FROM payments WHERE payment_gateway_order_id=%s",
+                (pi,)
+            )
+            row = fix_cur.fetchone()
+            if not row:
+                results.append(f"SKIP {pi} — no DB record found")
+                continue
+
+            booking_id = row["booking_id"]
+            fix_cur.execute(
+                "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
+                (pi, pi)
+            )
+            fix_cur.execute(
+                "UPDATE user_bookings SET payment_status='paid' WHERE id=%s",
+                (booking_id,)
+            )
+            fix_db.commit()
+            results.append(f"FIXED {pi} → booking {booking_id} marked paid")
+
         fix_cur.close()
-        return f"OK — payment {pi_id} marked as paid, booking {booking_id} marked paid."
+        fix_db.close()
     except Exception as e:
         return f"Error: {e}", 500
+
+    if not results:
+        return "No pending payments found to fix.", 200
+    return "<br>".join(results), 200
 
 
 if __name__ == "__main__":
