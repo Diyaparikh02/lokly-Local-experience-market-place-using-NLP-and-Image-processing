@@ -2100,15 +2100,25 @@ def create_payment_intent():
     amount_paise = int(amount_inr * 100)  # Stripe uses smallest currency unit
 
     user_id = session["user_id"]
-    cur = db.cursor(dictionary=True)
+
+    # Always ensure fresh connection before payment DB ops
+    try:
+        ensure_connection()
+        cur = db.cursor(dictionary=True)
+    except Exception as e:
+        return jsonify({"error": f"Database connection error: {e}"}), 500
 
     # Create booking with payment_status = pending
-    cur.execute(
-        "INSERT INTO user_bookings (user_id, activity_id, booking_date, payment_status) VALUES (%s, %s, %s, 'pending')",
-        (user_id, db_activity_id, date)
-    )
-    db.commit()
-    booking_id = cur.lastrowid
+    try:
+        cur.execute(
+            "INSERT INTO user_bookings (user_id, activity_id, booking_date, payment_status) VALUES (%s, %s, %s, 'pending')",
+            (user_id, db_activity_id, date)
+        )
+        db.commit()
+        booking_id = cur.lastrowid
+    except Exception as e:
+        cur.close()
+        return jsonify({"error": f"DB error creating booking: {e}"}), 500
 
     # Create Stripe PaymentIntent
     try:
@@ -2125,11 +2135,15 @@ def create_payment_intent():
         return jsonify({"error": f"Payment error: {str(e)}"}), 500
 
     # Store payment record as pending
-    cur.execute(
-        "INSERT INTO payments (user_id, booking_id, amount, currency, status, payment_gateway_order_id) VALUES (%s, %s, %s, 'INR', 'pending', %s)",
-        (user_id, booking_id, amount_inr, intent["id"])
-    )
-    db.commit()
+    try:
+        cur.execute(
+            "INSERT INTO payments (user_id, booking_id, amount, currency, status, payment_gateway_order_id) VALUES (%s, %s, %s, 'INR', 'pending', %s)",
+            (user_id, booking_id, amount_inr, intent["id"])
+        )
+        db.commit()
+    except Exception as e:
+        cur.close()
+        return jsonify({"error": f"DB error storing payment record: {e}"}), 500
     cur.close()
 
     return jsonify({
@@ -2158,40 +2172,47 @@ def confirm_payment():
     except stripe.error.StripeError as e:
         return jsonify({"success": False, "error": str(e.user_message)}), 400
 
+    # Use a fresh independent connection for confirm_payment to avoid shared-state issues
+    pay_db = None
     try:
-        ensure_connection()
-        cur = db.cursor()
+        pay_db = mysql.connector.connect(**_db_kwargs)
+        pay_cur = pay_db.cursor()
     except Exception as e:
         print(f"[ERROR] confirm_payment DB connect failed: {e}")
-        return jsonify({"success": False, "error": "Database connection error. Your payment may have succeeded — please contact support with your payment ID."}), 500
+        return jsonify({"success": False, "error": f"Database connection error ({e}). Your payment ID: {payment_intent_id}"}), 500
 
     try:
         if intent["status"] == "succeeded":
-            cur.execute(
+            pay_cur.execute(
                 "UPDATE payments SET status='success', payment_gateway_payment_id=%s WHERE payment_gateway_order_id=%s",
                 (payment_intent_id, payment_intent_id)
             )
-            cur.execute(
+            pay_cur.execute(
                 "UPDATE user_bookings SET payment_status='paid' WHERE id=%s",
                 (booking_id,)
             )
-            db.commit()
-            cur.close()
+            pay_db.commit()
+            pay_cur.close()
+            pay_db.close()
         else:
-            cur.execute(
+            pay_cur.execute(
                 "UPDATE payments SET status='failed' WHERE payment_gateway_order_id=%s",
                 (payment_intent_id,)
             )
-            cur.execute(
+            pay_cur.execute(
                 "UPDATE user_bookings SET payment_status='failed' WHERE id=%s",
                 (booking_id,)
             )
-            db.commit()
-            cur.close()
+            pay_db.commit()
+            pay_cur.close()
+            pay_db.close()
             return jsonify({"success": False, "error": "Payment not completed. Please try again."}), 400
     except Exception as e:
         print(f"[ERROR] confirm_payment DB update failed: {e}")
-        return jsonify({"success": False, "error": f"DB error updating booking. Your payment ID is {payment_intent_id} — please contact support."}), 500
+        if pay_db:
+            try: pay_db.close()
+            except: pass
+        return jsonify({"success": False, "error": f"DB error: {e}. Your payment ID is {payment_intent_id}"}), 500
 
     if intent["status"] == "succeeded":
         # ---- Send confirmation emails (non-blocking) ----
